@@ -13,7 +13,7 @@ extern "C" {
 
 extern struct AndList *final;
 
-class relation {
+class Relation {
 
 private:
 	char *rname;
@@ -21,7 +21,7 @@ private:
 	char rpath[100]; 
 	Schema *rschema;
 public:
-	relation (char *_name, Schema *_schema, char *_prefix) :
+	Relation (char *_name, Schema *_schema, char *_prefix) :
 		rname (_name), rschema (_schema), prefix (_prefix) {
 		sprintf (rpath, "%s%s.bin", prefix, rname);
 	}
@@ -29,7 +29,7 @@ public:
 	char* path () { return rpath; }
 	Schema* schema () { return rschema;}
 	void info () {
-		cout << " relation info\n";
+		cout << " Relation info\n";
 		cout << "\t name: " << name () << endl;
 		cout << "\t path: " << path () << endl;
 	}
@@ -53,7 +53,7 @@ char *orders = "orders";
 char *region = "region"; 
 char *lineitem = "lineitem"; 
 
-relation *s, *p, *ps, *n, *li, *r, *o, *c;
+Relation *s, *p, *ps, *n, *li, *r, *o, *c;
 
 void setup (char *catalog_path, char *dbfile_dir, char *tpch_dir) {
 	cout << " \n** IMPORTANT: MAKE SURE THE INFORMATION BELOW IS CORRECT **\n";
@@ -62,14 +62,14 @@ void setup (char *catalog_path, char *dbfile_dir, char *tpch_dir) {
 	cout << " heap files dir: \t" << dbfile_dir << endl;
 	cout << " \n\n";
 
-	s = new relation (supplier, new Schema (catalog_path, supplier), dbfile_dir);
-	ps = new relation (partsupp, new Schema (catalog_path, partsupp), dbfile_dir);
-	p = new relation (part, new Schema (catalog_path, part), dbfile_dir);
-	n = new relation (nation, new Schema (catalog_path, nation), dbfile_dir);
-	li = new relation (lineitem, new Schema (catalog_path, lineitem), dbfile_dir);
-	r = new relation (region, new Schema (catalog_path, region), dbfile_dir);
-	o = new relation (orders, new Schema (catalog_path, orders), dbfile_dir);
-	c = new relation (customer, new Schema (catalog_path, customer), dbfile_dir);
+	s = new Relation (supplier, new Schema (catalog_path, supplier), dbfile_dir);
+	ps = new Relation (partsupp, new Schema (catalog_path, partsupp), dbfile_dir);
+	p = new Relation (part, new Schema (catalog_path, part), dbfile_dir);
+	n = new Relation (nation, new Schema (catalog_path, nation), dbfile_dir);
+	li = new Relation (lineitem, new Schema (catalog_path, lineitem), dbfile_dir);
+	r = new Relation (region, new Schema (catalog_path, region), dbfile_dir);
+	o = new Relation (orders, new Schema (catalog_path, orders), dbfile_dir);
+	c = new Relation (customer, new Schema (catalog_path, customer), dbfile_dir);
 }
 
 void cleanup () {

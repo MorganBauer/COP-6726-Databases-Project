@@ -9,7 +9,7 @@ char *catalog_path = "catalog"; // full path of the catalog file
 
 using namespace std;
 
-relation *rel;
+Relation *rel;
 
 // load from a tpch file
 void test1 () {
@@ -79,7 +79,7 @@ int main () {
 	setup (catalog_path, dbfile_dir, tpch_dir);
 
 	void (*test) ();
-	relation *rel_ptr[] = {n, r, c, p, ps, o, li};
+	Relation *rel_ptr[] = {n, r, c, p, ps, o, li};
 	void (*test_ptr[]) () = {&test1, &test2, &test3};  
 
 	int tindx = 0;

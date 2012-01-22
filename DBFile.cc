@@ -23,6 +23,8 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
     default:
       cout << "I don't know what type of file that is. Doing Nothing." <<  endl;
     }
+
+  return 0;
 }
 
 void DBFile::Load (Schema &f_schema, char *loadpath) {
