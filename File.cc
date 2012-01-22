@@ -8,7 +8,7 @@
 #include <iostream>
 #include <stdlib.h>
 
-
+#define verbose
 
 Page :: Page () {
 	curSizeInBytes = sizeof (int);

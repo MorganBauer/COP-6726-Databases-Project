@@ -48,8 +48,8 @@ public:
 class File {
 private:
 
-	int myFilDes;
-	off_t curLength; 
+  int myFilDes; // file descriptor 
+  off_t curLength; // current length of file
 
 public:
 
