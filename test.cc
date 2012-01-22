@@ -76,7 +76,7 @@ void test3 () {
 
 int main () {
 
-	setup (catalog_path, dbfile_dir, tpch_dir);
+  setup (catalog_path, dbfile_dir, tpch_dir);
 
 	void (*test) ();
 	Relation *rel_ptr[] = {n, r, c, p, ps, o, li};

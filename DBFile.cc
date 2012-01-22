@@ -42,6 +42,16 @@ void DBFile::MoveFirst () {
 }
 
 int DBFile::Close () {
+  // possibly also write out information to the metadata file before closing.
+  
+  int fsize = f.Close();
+  if (fsize >= 0) // check that file size is positive. This is the only rational test I can come up with at this time.
+    {
+      return 1;
+    }
+  else {
+    return 0; //failure, negative file size, or some other error.
+  }
 }
 
 void DBFile::Add (Record &rec) {
