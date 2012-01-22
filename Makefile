@@ -1,5 +1,5 @@
-CC = g++ -O2 -Wno-deprecated 
-
+CC = g++ -O2 -Wno-deprecated -Wall -Wextra -pedantic -ggdb 
+# wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
 tag = -i
 
 ifdef linux
