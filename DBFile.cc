@@ -13,10 +13,15 @@ DBFile::DBFile () {
 }
 
 int DBFile::Create (char *f_path, fType f_type, void *startup) {
+
+  f.Open(0,f_path);
+
   switch(f_type)
     {
     case heap:
       cout << "This is a heap file. Operating in heap mode." <<  endl;
+      cout << "Writing metadata file as " << f_path <<".header" << endl;
+      // make extra file with .header attached to tell us about this heap type db file
       break;
     case sorted:
     case tree:
