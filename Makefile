@@ -1,4 +1,4 @@
-CC = g++ -O2 -Wno-deprecated -Wall -Wextra -Wshadow -pedantic -ggdb 
+CC = g++ -O2 -Wno-deprecated -Wall -Wextra -Wshadow -pedantic-errors -ggdb 
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
 tag = -i
 
