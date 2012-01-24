@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #define verbose
+#define F_DEBUG
 
 Page :: Page () {
 	curSizeInBytes = sizeof (int);
