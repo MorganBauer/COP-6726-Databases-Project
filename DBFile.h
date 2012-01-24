@@ -14,6 +14,7 @@ class DBFile {
  private:
 
   File f;
+  Page p;
 
  public:
   DBFile ();
