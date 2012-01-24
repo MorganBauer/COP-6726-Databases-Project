@@ -7,6 +7,7 @@
 #include "DBFile.h"
 #include "Defs.h"
 #include <iostream>
+#include <cassert>
 
 DBFile::DBFile () {
 
@@ -38,27 +39,35 @@ void DBFile::Load (Schema &f_schema, char *loadpath) {
   FILE *tableFile = fopen (loadpath, "r");
   Record temp;
 
-  int counter = 0;
+  int recordCounter = 0;
+  int pageCounter = 0;
+  bool addedToFile = false;
 
   while (temp.SuckNextRecord (&f_schema, tableFile) == 1) {
+    assert(pageCounter >= 0);
+    assert(recordCounter >= 0);
     // from example 'main' program
     // counter for debug
-    counter++;
-    if (counter % 10000 == 0) {
-      cerr << counter << "\n";
+    recordCounter++;
+    if (recordCounter % 10000 == 0) {
+      cerr << recordCounter << "\n";
     }
     // use temp, and put into page p, just do one for each record, for now. Later if page is full, write to file,
     int full = p.Append(&temp);
+    addedToFile = false;
     if (full == 0)
       {
         cout << "Page was full" << endl;
-        f.AddPage(&p,f.GetLength());
+        f.AddPage(&p,pageCounter++);
+        addedToFile = true;
         p.EmptyItOut();
       }
   }
   // make sure to add the last page
-  f.AddPage(&p,f.GetLength());
-
+  if (addedToFile == false)
+    {
+      f.AddPage(&p,pageCounter);
+    }
 }
 
 int DBFile::Open (char *f_path) {
