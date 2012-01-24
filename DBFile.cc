@@ -52,10 +52,9 @@ void DBFile::Load (Schema &f_schema, char *loadpath) {
     if (full == 0)
       {
         cout << "Page was full" << endl;
-      }
         f.AddPage(&p,f.GetLength());
         p.EmptyItOut();
-      
+      }
   }
   // make sure to add the last page
   f.AddPage(&p,f.GetLength());
