@@ -8,7 +8,6 @@ char *tpch_dir ="/cise/tmp/dbi_sp11/DATA/10M/"; // dir where dbgen tpch files (e
 char *catalog_path = "catalog"; // full path of the catalog file
 
 using namespace std;
-
 Relation *rel;
 
 // load from a tpch file
@@ -16,14 +15,14 @@ void test1 () {
 
 	DBFile dbfile;
 	cout << " DBFile will be created at " << rel->path () << endl;
-	dbfile.Create (rel->path(), heap, NULL);
+	dbfile.Create (rel->path(), heap, NULL); // IMPLEMENT THIS
 
 	char tbl_path[100]; // construct path of the tpch flat text file
 	sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name()); 
 	cout << " tpch file will be loaded from " << tbl_path << endl;
 
-	dbfile.Load (*(rel->schema ()), tbl_path);
-	dbfile.Close ();
+	dbfile.Load (*(rel->schema ()), tbl_path); // IMPLEMENT THIS
+	dbfile.Close (); // IMPLEMENT THIS
 }
 
 // sequential scan of a DBfile 
