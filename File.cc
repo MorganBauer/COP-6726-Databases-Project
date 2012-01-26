@@ -157,6 +157,7 @@ void Page :: FromBinary (char *bits) {
 }
 
 File :: File () {
+  curLength = 0;
 }
 
 File :: ~File () {
@@ -211,7 +212,7 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 	}
 
 	// now write the page
-	char *bits = new (std::nothrow) char[PAGE_SIZE];
+	char *bits = new (std::nothrow) char[PAGE_SIZE]();
 	if (bits == NULL)
 	{
 		cout << "ERROR : Not enough memory. EXIT !!!\n";
