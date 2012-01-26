@@ -81,7 +81,7 @@ int DBFile::Open (char *f_path) {
 }
 
 void DBFile::MoveFirst () {
-
+  f.GetPage(&p, (off_t) 0);
 }
 
 int DBFile::Close () {
