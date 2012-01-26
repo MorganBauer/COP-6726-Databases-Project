@@ -74,6 +74,9 @@ void DBFile::Load (Schema &f_schema, char *loadpath) {
 }
 
 int DBFile::Open (char *f_path) {
+  // TODO
+  // remember switch statement and metadata file later.
+  f.Open(1, f_path);
   return 0;
 }
 
