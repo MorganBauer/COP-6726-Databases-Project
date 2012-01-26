@@ -14,7 +14,8 @@ class DBFile {
  private:
 
   File f;
-  Page p;
+  Page curPage;
+  off_t curPageIndex;
 
  public:
   DBFile ();
