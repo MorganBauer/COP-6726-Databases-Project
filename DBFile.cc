@@ -54,20 +54,23 @@ void DBFile::Load (Schema &f_schema, char *loadpath) {
     }
     // use temp, and put into page p, just do one for each record, for now. Later if page is full, write to file,
     int full = p.Append(&temp);
-    addedToFile = false;
     if (full == 0)
       {
-        cout << "Page was full" << endl;
+        cerr << "Page was full" << endl;
         f.AddPage(&p,pageCounter++);
-        addedToFile = true;
         p.EmptyItOut();
+        addedToFile = true;
+        p.Append(&temp);
+        addedToFile = false;
       }
   }
   // make sure to add the last page
-  if (addedToFile == false)
-    {
-      f.AddPage(&p,pageCounter);
-    }
+  //if (addedToFile == false)
+  {
+    f.AddPage(&p,pageCounter++);
+    cout << "Read and converted " << recordCounter <<
+      " records, into " << pageCounter << " pages." << endl;
+  }
 }
 
 int DBFile::Open (char *f_path) {
