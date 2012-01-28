@@ -8,7 +8,7 @@
 #include "Defs.h"
 #include <iostream>
 #include <cassert>
-
+#include <cstdlib>
 /* Morgan Bauer */
 
 DBFile::DBFile () {
