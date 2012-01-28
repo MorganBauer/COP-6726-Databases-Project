@@ -9,6 +9,8 @@
 #include <iostream>
 #include <cassert>
 
+/* Morgan Bauer */
+
 DBFile::DBFile () {
 
 }
@@ -37,6 +39,8 @@ void DBFile::Load (Schema &f_schema, char *loadpath) {
   // loadpath is path to '.tbl' file
   // we need to iterate thorugh the whole table writing it to the file.
   FILE *tableFile = fopen (loadpath, "r");
+  if (tableFile == 0)
+    exit(-1);
   Record tempRecord;
   Page tempPage;
   int recordCounter = 0; // counter for debug
@@ -54,7 +58,7 @@ void DBFile::Load (Schema &f_schema, char *loadpath) {
     int full = tempPage.Append(&tempRecord);
     if (full == 0)
       {
-        cerr << "Page was full" << endl;
+        // cerr << "Page was full" << endl;
         f.AddPage(&tempPage,pageCounter++);
         tempPage.EmptyItOut();
         tempPage.Append(&tempRecord);
@@ -95,6 +99,21 @@ int DBFile::Close () {
 }
 
 void DBFile::Add (Record &rec) {
+  Page tempPage; // 
+  //cout << "getting page " << f.GetLength() << endl;
+  f.GetPage(&tempPage, f.GetLength() - 2 ); // get the last page with stuff in it.
+
+  if (0 == tempPage.Append(&rec))
+    {
+      // f.AddPage(&tempPage,f.GetLength()-1); // don't add page, it's already there.
+      tempPage.EmptyItOut();
+      tempPage.Append(&rec);
+      f.AddPage(&tempPage,f.GetLength()-1); // new final page
+    }
+  else
+    {
+      f.AddPage(&tempPage,f.GetLength()-2); // same final page
+    }
 
 }
 
@@ -115,21 +134,20 @@ int DBFile::GetNext (Record &fetchme) {
 
   if(0 == curPage.GetFirst(&fetchme)) // 0 is empty
     { // page is empty, get next page, if available, and return a record from it.
-
-      cout << "page " << curPageIndex + 1 << " was depleted." << endl;
+      // cout << "page " << curPageIndex + 1 << " was depleted." << endl;
       ++curPageIndex;
-      cout << "attempting to read page " << curPageIndex + 1  << " out of "
-           << (f.GetLength() - 1) << "... ";
+      // cout << "attempting to read page " << curPageIndex + 1  << " out of "
+      // << (f.GetLength() - 1) << "... ";
       if(curPageIndex + 1 <= f.GetLength() - 1) // if there are still more pages to read.
         {
-          cout << "successful" << endl;
+          // cout << "successful" << endl;
           f.GetPage(&curPage, curPageIndex);
-          assert(1 == curPage.GetFirst(&fetchme));
+          assert(1 == curPage.GetFirst(&fetchme)); // we can't now have fewer pages than we did four lines ago.
           return 1;
         }
-      else
+      else // there are no more pages to read.
         {
-          cout << "failed, end of file" << endl;
+          // cout << "failed, end of file" << endl;
           return 0;
         }
     }
