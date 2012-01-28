@@ -1,9 +1,16 @@
+/* Morgan Bauer */
+
+Things work the same way they used too, but better.
+
+
+
+
 012408-1606P
 --updated Lexer.l
 
 readme 
 =========
-Test driver for Assignment 1 heap DBFile (spring 2011 dbi) 
+Test driver for Assignment 1 heap DBFile (spring 2011 dbi)  < LOL, shouldn't that say 2012.
 
 This test driver gives a menu-based interface to three options that allows you to test your code:
 	1. load (read a tpch file and write it out a heap DBFile)
@@ -111,3 +118,6 @@ q12
 (l_shipmode = 'AIR') AND
 (l_linestatus = 'F') AND
 (l_tax < 0.07)
+
+
+(l_orderkey = 1) AND 
