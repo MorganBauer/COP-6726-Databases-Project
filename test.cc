@@ -2,6 +2,8 @@
 #include "DBFile.h"
 #include "test.h"
 
+/* Morgan Bauer */
+
 // make sure that the file path/dir information below is correct
 char *dbfile_dir = "/tmp/mhb/"; // dir where binary heap files should be stored
 // char *tpch_dir ="/cise/tmp/dbi_sp11/DATA/1G/"; // dir where dbgen tpch files (extension *.tbl) can be found
