@@ -8,7 +8,7 @@
 char *dbfile_dir = "/tmp/mhb/"; // dir where binary heap files should be stored
 // char *tpch_dir ="/cise/tmp/dbi_sp11/DATA/1G/"; // dir where dbgen tpch files (extension *.tbl) can be found
 //char *tpch_dir ="/cise/homes/mhb/dbi/origData/"; // dir where dbgen tpch files (extension *.tbl) can be found
-char *tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
+char *tpch_dir ="/Users/morganbauer/Downloads/tpch_2_14_3/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
 char *catalog_path = "catalog"; // full path of the catalog file
 
 using namespace std;
@@ -84,16 +84,16 @@ void test4 ()
   test2 ();
 
   DBFile dbfile;
-  Record temp;
-  dbfile.Open (rel->path()); // IMPLEMENTED FOR TEST-TWO
-  dbfile.MoveFirst(); //Get the first record
-  dbfile.GetNext(temp);
-  dbfile.MoveFirst(); //And reset pointer
+  Record temp; // hold a record
 
+  dbfile.Open (rel->path()); // IMPLEMENTED FOR TEST-TWO
+  dbfile.MoveFirst(); 
+  dbfile.GetNext(temp); //Get the first record
   cout << "ADDING" << endl;
   dbfile.Add(temp);
   cout << "ADDED" << endl;
-  dbfile.Close();
+  dbfile.Close(); // test 2 opens and closes the file itself.
+
   test2 ();
 }
 
