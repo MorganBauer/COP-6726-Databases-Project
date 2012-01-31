@@ -142,7 +142,8 @@ int DBFile::GetNext (Record &fetchme) {
         {
           // cout << "successful" << endl;
           f.GetPage(&curPage, curPageIndex);
-          assert(1 == curPage.GetFirst(&fetchme)); // we can't now have fewer pages than we did four lines ago.
+          int ret = curPage.GetFirst(&fetchme)
+          assert(1 == ret); // we can't now have fewer pages than we did four lines ago.
           return 1;
         }
       else // there are no more pages to read.
