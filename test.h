@@ -25,6 +25,10 @@ class Relation {
   rname (_name), rschema (_schema), prefix (_prefix) {
     sprintf (rpath, "%s%s.bin", prefix, rname);
   }
+  ~Relation()
+    {
+      delete rschema;
+    }
   char* name () { return rname; }
   char* path () { return rpath; }
   Schema* schema () { return rschema;}
