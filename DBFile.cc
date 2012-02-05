@@ -39,31 +39,31 @@ void DBFile::Load (Schema &f_schema, char *loadpath) {
   // loadpath is path to '.tbl' file
   // we need to iterate thorugh the whole table writing it to the file.
   FILE *tableFile = fopen (loadpath, "r");
-  if (tableFile == 0)
+  if (0 == tableFile)
     exit(-1);
   Record tempRecord;
   Page tempPage;
   int recordCounter = 0; // counter for debug
   int pageCounter = 0; // counter for debug
-  // bool addedToFile = false;
 
-  while (tempRecord.SuckNextRecord (&f_schema, tableFile) == 1) {
-    assert(pageCounter >= 0);
-    assert(recordCounter >= 0);
-    recordCounter++;
-    if (recordCounter % 10000 == 0) {
-      cerr << recordCounter << "\n";
-    }
-    // use tempRecord, and put into tempPage. Later if page is full, write to file,
-    int full = tempPage.Append(&tempRecord);
-    if (full == 0)
-      {
-        // cerr << "Page was full" << endl;
-        f.AddPage(&tempPage,pageCounter++);
-        tempPage.EmptyItOut();
-        tempPage.Append(&tempRecord);
+  while (1 == tempRecord.SuckNextRecord (&f_schema, tableFile))
+    { // there is another record available
+      assert(pageCounter >= 0);
+      assert(recordCounter >= 0);
+      recordCounter++;
+      if (recordCounter % 10000 == 0) {
+        cerr << recordCounter << "\n";
       }
-  }
+      // use tempRecord, and put into tempPage. Later if page is full, write to file,
+      int full = tempPage.Append(&tempRecord);
+      if (0 == full)
+        {
+          // page was full
+          f.AddPage(&tempPage,pageCounter++);
+          tempPage.EmptyItOut();
+          tempPage.Append(&tempRecord);
+        }
+    }
   { // make sure to add the last page
     f.AddPage(&tempPage,pageCounter++);
     cout << "Read and converted " << recordCounter <<
@@ -99,18 +99,18 @@ int DBFile::Close () {
 }
 
 void DBFile::Add (Record &rec) {
-  Page tempPage; // 
+  Page tempPage; //
   //cout << "getting page " << f.GetLength() << endl;
   f.GetPage(&tempPage, f.GetLength() - 2 ); // get the last page with stuff in it.
 
-  if (0 == tempPage.Append(&rec))
+  if (0 == tempPage.Append(&rec)) // if the page is full
     {
       // f.AddPage(&tempPage,f.GetLength()-1); // don't add page, it's already there.
       tempPage.EmptyItOut();
       tempPage.Append(&rec);
       f.AddPage(&tempPage,f.GetLength()-1); // new final page
     }
-  else
+  else // the page is not full (this is probably the more common case and we should flip the if/else order
     {
       f.AddPage(&tempPage,f.GetLength()-2); // same final page
     }
@@ -129,8 +129,6 @@ int DBFile::GetNext (Record &fetchme) {
     case, for example, if the last record in the file has already been
     returned).
   */
-
-  //Record temp;
 
   if(0 == curPage.GetFirst(&fetchme)) // 0 is empty
     { // page is empty, get next page, if available, and return a record from it.
@@ -164,12 +162,12 @@ int DBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
   // it may or may not be a smart idea. ~quoth the Nick. NEVERMORE.
   ComparisonEngine comp;
 
-  while(1 == GetNext(fetchme))
+  while(1 == GetNext(fetchme)) // there are more records
     {
-      if (comp.Compare(&fetchme,&literal,&cnf))
+      if (comp.Compare(&fetchme,&literal,&cnf)) // check the record
         {
           return 1;
-        }
+        } 
     }
   return 0;
 }
