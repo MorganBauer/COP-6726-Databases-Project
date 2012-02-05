@@ -21,6 +21,10 @@ class Relation {
   char *prefix; //
   char rpath[100]; // path to relation
  public:
+  ~Relation()
+    {
+      delete rschema;
+    }
   Relation (char *_name, Schema *_schema, char *_prefix) :
   rname (_name), rschema (_schema), prefix (_prefix) {
     sprintf (rpath, "%s%s.bin", prefix, rname);
