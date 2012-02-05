@@ -84,7 +84,7 @@ Schema :: Schema (char *fName, char *relName) {
 	fscanf (foo, "%s", space);
 	totscans++;
 	fileName = strdup (space);
-
+        
 	// count the number of attributes specified
 	numAtts = 0;
 	while (1) {
@@ -111,7 +111,7 @@ Schema :: Schema (char *fName, char *relName) {
 	for (int i = 0; i < numAtts; i++ ) {
 
 		// read in the attribute name
-		fscanf (foo, "%s", space);	
+		fscanf (foo, "%s", space);
 		myAtts[i].name = strdup (space);
 
 		// read in the attribute type
@@ -132,7 +132,13 @@ Schema :: Schema (char *fName, char *relName) {
 }
 
 Schema :: ~Schema () {
+  free(fileName);
+  for (int i = 0; i < numAtts; i++ )
+    {
+      free(myAtts[i].name);
+    }
 	delete [] myAtts;
 	myAtts = 0;
+
 }
 
