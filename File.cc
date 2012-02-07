@@ -212,7 +212,7 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 	}
 
 	// now write the page
-	char *bits = new (std::nothrow) char[PAGE_SIZE]();
+	char * bits = new (std::nothrow) char[PAGE_SIZE];
 	if (bits == NULL)
 	{
 		cout << "ERROR : Not enough memory. EXIT !!!\n";
