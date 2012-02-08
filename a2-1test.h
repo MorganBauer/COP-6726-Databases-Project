@@ -43,6 +43,10 @@ class relation {
   rname (_name), rschema (_schema), prefix (_prefix) {
     sprintf (rpath, "%s%s.bin", prefix, rname);
   }
+  ~relation()
+    {
+      delete rschema;
+    }
   char* name () { return rname; }
   char* path () { return rpath; }
   Schema* schema () { return rschema;}
@@ -75,9 +79,7 @@ class relation {
   }
 };
 
-
 relation *rel;
-
 
 char *supplier = "supplier";
 char *partsupp = "partsupp";

@@ -2,7 +2,7 @@
 #include "BigQ.h"
 #include <pthread.h>
 
-void *producer (void *arg) {
+void * producer (void * arg) {
 
   Pipe *myPipe = (Pipe *) arg;
 
@@ -14,7 +14,8 @@ void *producer (void *arg) {
   cout << " producer: opened DBFile " << rel->path () << endl;
   dbfile.MoveFirst ();
 
-  while (dbfile.GetNext (temp) == 1) {
+  // while we can get a record from the database, shove it in the pipe.
+  while (1 == dbfile.GetNext (temp)) {
     counter += 1;
     if (counter%100000 == 0) {
       cerr << " producer: " << counter << endl;
@@ -28,16 +29,16 @@ void *producer (void *arg) {
   cout << " producer: inserted " << counter << " recs into the pipe\n";
 }
 
-void *consumer (void *arg) {
+void * consumer (void * arg) {
 
-  testutil *t = (testutil *) arg;
+  testutil * t = (testutil *) arg; // see if reinterpret_cast  works here later
 
   ComparisonEngine ceng;
 
   DBFile dbfile;
   char outfile[100];
 
-  if (t->write) {
+  if (t->write) { 
     sprintf (outfile, "%s.bigq", rel->path ());
     dbfile.Create (outfile, heap, NULL);
   }
@@ -45,15 +46,25 @@ void *consumer (void *arg) {
   int err = 0;
   int i = 0;
 
+  // the idea here, is two different things.
+  // last will hold whatever record that will end up being the last record we see
+  // 
+  // double buffering setup
   Record rec[2];
-  Record *last = NULL, *prev = NULL;
+  Record *last = NULL, *prev = NULL; // last and prev index into the buffer.
 
-  while (t->pipe->Remove (&rec[i%2])) {
+  while (t->pipe->Remove (&rec[i%2])) { // get next guy.
     prev = last;
     last = &rec[i%2];
 
-    if (prev && last) {
-      if (ceng.Compare (prev, last, t->order) == 1) {
+    // the conditional works at the beginning.
+    // if there is at least one thing in the the pipe
+    // prev is null, and last is the record we just pulled out
+    // so we don't have two things to compare and thus skip compare
+    // at the end, we never get here.
+    // so really, we just need to make sure that prev is not NULL.
+    if (NULL != prev && NULL != last) { // make sure neither is NULL, so that we can follow the pointers and compare them. works at both beginning and end.
+      if (1 == ceng.Compare (prev, last, t->order)) { // wrong order coming out of the "sorted order" pipe
         err++;
       }
       if (t->write) {
@@ -94,7 +105,7 @@ void test1 (int option, int runlen) {
 
   // thread to dump data into the input pipe (for BigQ's consumption)
   pthread_t thread1;
-  pthread_create (&thread1, NULL, producer, (void *)&input);
+  pthread_create (&thread1, NULL, producer, (void *)&input); 
 
   // thread to read sorted data from output pipe (dumped by BigQ)
   pthread_t thread2;
