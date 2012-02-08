@@ -39,6 +39,7 @@ public:
 
 	// suck the contents of the record fromMe into this; note that after
 	// this call, fromMe will no longer have anything inside of it
+        // strictly speaking, it will have an invalid reference, NULL to be specific
 	void Consume (Record *fromMe);
 
 	// make a copy of the record fromMe; note that this is far more 

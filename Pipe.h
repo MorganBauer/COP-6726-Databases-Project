@@ -36,6 +36,7 @@ public:
 	// buffer size is exceeded, then the insertion may block
 	// Note that the parameter is consumed; after insertion, it can
 	// no longer be used and will be zero'ed out
+        // again, incorrect, the reference is invalid and is a NULL pointer.
 	void Insert (Record *insertMe);
 
 	// This removes a record from the pipeline and puts it into the
@@ -45,7 +46,7 @@ public:
 	// and a zero if there are no more records in the pipeline
 	int Remove (Record *removeMe);
 
-	// shut down the pipepine; used by the consumer to signal that 
+	// shut down the pipepine; used by the *producer* to signal that 
 	// there is no more data that is going to be added into the pipe
 	void ShutDown ();
 
