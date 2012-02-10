@@ -46,6 +46,21 @@ class Relation {
     }
     cnf_pred.GrowFromParseTree (final, schema (), literal); // constructs CNF predicate
   }
+
+  void get_sort_order (OrderMaker &sortorder)
+  {
+    cout << "\n specify sort ordering (when done press ctrl-D):\n\t ";
+    if (yyparse() != 0) {
+      cout << "Can't parse your sort CNF.\n";
+      exit (1);
+    }
+    cout << " \n";
+    Record literal;
+    CNF sort_pred;
+    sort_pred.GrowFromParseTree (final, schema (), literal); // constructs CNF predicate
+    OrderMaker dummy;
+    sort_pred.GetSortOrders (sortorder, dummy);
+  }
 };
 
 char *supplier = "supplier";

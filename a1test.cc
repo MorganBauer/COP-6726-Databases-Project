@@ -1,4 +1,6 @@
 #include <iostream>
+#include <algorithm>
+#include <vector>
 #include "DBFile.h"
 #include "a1test.h"
 
@@ -87,7 +89,7 @@ void test4 ()
   Record temp; // hold a record
 
   dbfile.Open (rel->path()); // IMPLEMENTED FOR TEST-TWO
-  dbfile.MoveFirst(); 
+  dbfile.MoveFirst();
   dbfile.GetNext(temp); //Get the first record
   cout << "ADDING" << endl;
   dbfile.Add(temp);
@@ -111,21 +113,148 @@ void generateAll ()
   dbfile.Close (); // IMPLEMENT THIS
 }
 
+struct sorter : public std::binary_function<Record *, Record *, bool>
+{
+  OrderMaker * _so;
+public:
+  sorter(OrderMaker so) {this->_so = &so;}
+  bool operator()(Record & _x, Record & _y) { ComparisonEngine comp;
+    return  (comp.Compare(&_x, &_y, _so) < 0) ? true : false; }
+  bool operator()(Record * _x, Record * _y) { ComparisonEngine comp;
+    return  (comp.Compare((_x), (_y), _so) < 0) ? true : false; }
+};
+
+
+void testSort()
+{
+  Record x;
+  Record y;
+
+  char tbl_path[100]; // construct path of the tpch flat text file
+  sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name());
+  cout << " tpch file will be loaded from " << tbl_path << endl;
+  FILE *tableFile = fopen (tbl_path, "r");
+  x.SuckNextRecord(&*(rel->schema ()), tableFile);
+  y.SuckNextRecord(&*(rel->schema ()), tableFile);
+  x.Print (rel->schema());
+  y.Print (rel->schema());
+
+  OrderMaker sortorder;
+  rel->get_sort_order (sortorder);
+
+  ComparisonEngine ceng;
+  int compout = ceng.Compare (&x, &y, &sortorder);
+  cout << "comparison says " << compout << endl;
+
+
+
+  bool lessthanp; // = sorter(sortorder)(x,y);
+  // cout << "lessthanp says " << lessthanp << endl;
+  // lessthanp = sorter(sortorder)(&x,&y);
+  // cout << "lessthanp says " << lessthanp << endl;
+  {
+    cout << "using the functor" << endl;
+    sorter st = sorter(sortorder);
+    lessthanp = st(x,y);
+    cout << "lessthanp says " << lessthanp << endl;
+    lessthanp = st(&x,&y);
+    cout << "lessthanp says " << lessthanp << endl;
+  }
+
+  {
+    cout << "vector containing pointers to Record, copy" << endl;
+    vector<Record *> v;
+    v.push_back(&x);
+    v.push_back(&y);
+    // x.Print (rel->schema()); // works
+    // y.Print (rel->schema()); // works
+    // Record rt;
+    Page pt;
+    // rt.Copy(&x);
+    // pt.Append(&rt);
+    // rt.Copy(&y);
+    // pt.Append(&rt);
+    // all references are broken after this
+    // cout << "first last ref" << endl;
+    // (v.front())->Print (rel->schema());
+    // v.back()->Print (rel->schema());
+    cout << "direct index ref" << endl;
+    v[0]->Print (rel->schema());
+    v[1]->Print (rel->schema());
+
+
+    if(false){
+      cout << "before sort" << endl << endl;
+      sorter st = sorter(sortorder);
+      // sort(v.begin(),v.end(),sorter(sortorder));
+    }
+    // (l_linenumber)
+    // cout << "after sort" << endl << "printing records" << endl;
+    v[0]->Print (rel->schema());
+    v[1]->Print (rel->schema());
+
+    {
+      cout << endl << "functor again" << endl;
+      Record * r1;
+      Record * r2;
+      sorter st = sorter(sortorder);
+      r1 = v[0];
+      r2 = v[1];
+      lessthanp = st(r1,r2);
+      cout << "lessthanp says " << lessthanp << endl;
+
+      std::sort(v.begin(), v.end(), sorter(sortorder));
+
+      lessthanp = st(r1,r2);
+      cout << "lessthanp says " << lessthanp << endl;
+    }
+    v[0]->Print (rel->schema());
+    v[1]->Print (rel->schema());
+
+
+    pt.EmptyItOut();
+  } // vector is destroyed and deallocated after this.
+
+  /*
+    {
+    cout << "vector containing pointers to Record, nocopy" << endl;
+    vector<Record *> v;
+    v.push_back(&x);
+    v.push_back(&y);
+    x.Print (rel->schema()); // works
+    y.Print (rel->schema()); // works
+
+    Page pt;
+    pt.Append(&x);
+    pt.Append(&y);
+    // all references are broken after this
+    //    (v.front())->Print (rel->schema());
+    // v[0]->Print (rel->schema());
+    // v[1]->Print (rel->schema());
+    // v.back()->Print (rel->schema());
+    pt.EmptyItOut();
+    } // vector is destroyed and deallocated after this.
+  */
+
+
+}
+
 int main () {
 
   setup (catalog_path, dbfile_dir, tpch_dir);
 
   void (*test) ();
   Relation *rel_ptr[] = {n, r, c, p, ps, o, li};
-  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &generateAll};
+  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &testSort, &generateAll};
 
   int tindx = 0;
-  while (tindx < 1 || tindx > 4) {
+  while (tindx < 1 || tindx > 5) {
     cout << " select test: \n";
     cout << " \t 1. load file \n";
     cout << " \t 2. scan \n";
     cout << " \t 3. scan & filter \n";
     cout << " \t 4. add \n";
+    cout << " \t 5. testSort \n";
     cout << " \t ";
     cin >> tindx;
   }
