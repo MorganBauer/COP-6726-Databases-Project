@@ -241,7 +241,7 @@ TwoWayList <Type> :: Insert (Type *Item)
 
 	right->previous = temp;
 
-	temp->data->Consume (Item);
+	temp->data->Consume (Item); // this is Record specific, templating doesn't help here...
 
 	list->rightSize += 1;
 

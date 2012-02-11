@@ -77,7 +77,7 @@ int Page :: Append (Record *addMe) {
 
 	// and add it
 	curSizeInBytes += ((int *) b)[0];
-	myRecs->Insert(addMe);
+	myRecs->Insert(addMe); // put into internal doubly linked list
 	numRecs++;
 
 	return 1;	

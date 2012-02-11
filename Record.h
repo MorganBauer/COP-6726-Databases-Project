@@ -28,8 +28,8 @@ friend class ComparisonEngine;
 friend class Page;
 
 private:
-	char *bits;
-	char* GetBits ();
+	char * bits;
+	char * GetBits ();
 	void SetBits (char *bits);
 	void CopyBits(char *bits, int b_len);
 
@@ -42,7 +42,7 @@ public:
         // strictly speaking, it will have an invalid reference, NULL to be specific
 	void Consume (Record *fromMe);
 
-	// make a copy of the record fromMe; note that this is far more 
+	// make a copy of the record copyMe; note that this is far more 
 	// expensive (requiring a bit-by-bit copy) than Consume, which is
 	// only a pointer operation
 	void Copy (Record *copyMe);
