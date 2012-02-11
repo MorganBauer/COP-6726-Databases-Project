@@ -9,8 +9,11 @@
 // make sure that the file path/dir information below is correct
 char *dbfile_dir = "/tmp/mhb/"; // dir where binary heap files should be stored
 // char *tpch_dir ="/cise/tmp/dbi_sp11/DATA/1G/"; // dir where dbgen tpch files (extension *.tbl) can be found
-//char *tpch_dir ="/cise/homes/mhb/dbi/origData/"; // dir where dbgen tpch files (extension *.tbl) can be found
+#ifdef linux
+char *tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
+#else
 char *tpch_dir ="/Users/morganbauer/Downloads/tpch_2_14_3/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
+#endif
 char *catalog_path = "catalog"; // full path of the catalog file
 
 using namespace std;
@@ -137,7 +140,7 @@ void ptfn (Record rr)
 void testSort()
 {
   cout << endl << endl << endl
-       << " TESTING SORTING " 
+       << " TESTING SORTING "
        << endl << endl << endl;
   char tbl_path[100]; // construct path of the tpch flat text file
   sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name());
@@ -158,7 +161,7 @@ void testSort()
 
 void testCompare()
 {
-  cout << endl << endl << endl 
+  cout << endl << endl << endl
        << " TESTING COMPARISON FUNCTIONS AND FUNCTORS "
        << endl << endl << endl;
   Record x;
