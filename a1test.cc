@@ -124,9 +124,43 @@ public:
     return  (comp.Compare((_x), (_y), _so) < 0) ? true : false; }
 };
 
+// void ptfn (Record * rr)
+// {
+//   rr->Print (rel->schema());
+// }
+
+void ptfn (Record rr)
+{
+  rr.Print (rel->schema());
+}
 
 void testSort()
 {
+  cout << endl << endl << endl
+       << " TESTING SORTING " 
+       << endl << endl << endl;
+  char tbl_path[100]; // construct path of the tpch flat text file
+  sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name());
+  cout << " tpch file will be loaded from " << tbl_path << endl;
+  FILE *tableFile = fopen (tbl_path, "r");
+
+  vector < Record> records;
+  for (int i = 0; i < 5; i++)
+    {
+      Record rr;
+      rr.SuckNextRecord(&*(rel->schema ()), tableFile);
+      records.push_back(rr);
+    }
+
+  for_each(records.begin(), records.end(), ptfn);
+
+}
+
+void testCompare()
+{
+  cout << endl << endl << endl 
+       << " TESTING COMPARISON FUNCTIONS AND FUNCTORS "
+       << endl << endl << endl;
   Record x;
   Record y;
 
@@ -134,6 +168,7 @@ void testSort()
   sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name());
   cout << " tpch file will be loaded from " << tbl_path << endl;
   FILE *tableFile = fopen (tbl_path, "r");
+
   x.SuckNextRecord(&*(rel->schema ()), tableFile);
   y.SuckNextRecord(&*(rel->schema ()), tableFile);
   x.Print (rel->schema());
@@ -245,16 +280,17 @@ int main () {
 
   void (*test) ();
   Relation *rel_ptr[] = {n, r, c, p, ps, o, li};
-  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &testSort, &generateAll};
+  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &testCompare, &testSort, &generateAll};
 
   int tindx = 0;
-  while (tindx < 1 || tindx > 5) {
+  while (tindx < 1 || tindx > 6) {
     cout << " select test: \n";
     cout << " \t 1. load file \n";
     cout << " \t 2. scan \n";
     cout << " \t 3. scan & filter \n";
     cout << " \t 4. add \n";
-    cout << " \t 5. testSort \n";
+    cout << " \t 5. testCompare \n";
+    cout << " \t 6. testSort \n";
     cout << " \t ";
     cin >> tindx;
   }
