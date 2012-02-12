@@ -35,7 +35,10 @@ private:
 
 public:
 	Record ();
-	~Record();
+	Record (const Record & r);
+        Record & operator = (Record const & r);
+        ~Record();
+        
 
 	// suck the contents of the record fromMe into this; note that after
 	// this call, fromMe will no longer have anything inside of it

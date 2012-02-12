@@ -10,6 +10,37 @@ Record :: Record () {
 	bits = NULL;
 }
 
+Record :: Record (const Record & r)
+{
+  cout << "copy constructor called" << endl;
+  if (bits != NULL) { // if ours is allocated
+	delete [] bits;
+  }
+        if (r.bits == NULL) // if the other guy isn't allocated 
+          {return;} // nothing to do, exit immediately
+	bits = new (std::nothrow) char[((int *) r.bits)[0]]; // otherwise, allocate our storage
+	if (bits == NULL) // handle errors if necessary
+	{
+		cout << "ERROR : Not enough memory. EXIT !!!\n";
+		exit(1);
+	}
+
+	memcpy (bits, r.bits, ((int *) r.bits)[0]); // and make a copy
+  
+}
+
+Record & Record :: operator = (Record const & r)
+{
+  cout << "assignment operator called" << endl;
+  if (this != &r)
+    {
+      delete [] bits;
+      bits = NULL;
+      bits = r.bits;
+    }
+  return *this;
+}
+
 Record :: ~Record () {
 	if (bits != NULL) {
 		delete [] bits;

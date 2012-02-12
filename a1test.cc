@@ -1,9 +1,14 @@
 #include <iostream>
 #include <algorithm>
+#include <parallel/algorithm>
 #include <vector>
 #include "DBFile.h"
 #include "a1test.h"
-
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
+#include <ctime>
+#include <omp.h>
 /* Morgan Bauer */
 
 // make sure that the file path/dir information below is correct
@@ -11,7 +16,7 @@ char *dbfile_dir = "/tmp/mhb/"; // dir where binary heap files should be stored
 // char *tpch_dir ="/cise/tmp/dbi_sp11/DATA/1G/"; // dir where dbgen tpch files (extension *.tbl) can be found
 #ifdef linux
 char *tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
-#else
+#elif __MACH__
 char *tpch_dir ="/Users/morganbauer/Downloads/tpch_2_14_3/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
 #endif
 char *catalog_path = "catalog"; // full path of the catalog file
@@ -116,25 +121,50 @@ void generateAll ()
   dbfile.Close (); // IMPLEMENT THIS
 }
 
-struct sorter : public std::binary_function<Record *, Record *, bool>
+struct sorter //: public std::binary_function<Record *, Record *, bool>
 {
   OrderMaker * _so;
 public:
-  sorter(OrderMaker so) {this->_so = &so;}
+  //sorter(OrderMaker so) {this->_so = &so;}
+  sorter(OrderMaker so) : _so(&so){}
   bool operator()(Record & _x, Record & _y) { ComparisonEngine comp;
     return  (comp.Compare(&_x, &_y, _so) < 0) ? true : false; }
+  bool operator()(const Record & _x, const Record & _y) { ComparisonEngine comp;
+    return  (comp.Compare(const_cast<Record *>(&_x), const_cast<Record *>(&_y), _so) < 0) ? true : false; }
   bool operator()(Record * _x, Record * _y) { ComparisonEngine comp;
     return  (comp.Compare((_x), (_y), _so) < 0) ? true : false; }
 };
+
+extern FILE *yyin;
 
 // void ptfn (Record * rr)
 // {
 //   rr->Print (rel->schema());
 // }
-
+ 
 void ptfn (Record rr)
 {
   rr.Print (rel->schema());
+}
+
+static char buffer[] = "(l_orderkey) AND (l_returnflag) AND (l_tax) AND (l_discount)";
+
+void hijack_parser()
+{
+  // hijack yyin here, before yyparse needs it.
+
+  cout << buffer << endl;
+#ifdef linux
+  yyin = fmemopen(buffer, strlen(buffer),"r");
+  if (yyin == NULL)
+    {
+      cout << "well crap, out of memory" << endl;
+      exit (-1);
+    }
+#elif __MACH__
+  //yyin = funopen(); // bsd version that is a pain in the ass
+#endif
+
 }
 
 void testSort()
@@ -146,16 +176,124 @@ void testSort()
   sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name());
   cout << " tpch file will be loaded from " << tbl_path << endl;
   FILE *tableFile = fopen (tbl_path, "r");
+  omp_set_num_threads(4);
+  static const int records_to_read = 5;
 
-  vector < Record> records;
-  for (int i = 0; i < 5; i++)
-    {
-      Record rr;
-      rr.SuckNextRecord(&*(rel->schema ()), tableFile);
-      records.push_back(rr);
-    }
+  // Starting the time measurement
+  double start = omp_get_wtime();
+  // Computations to be measured
 
-  for_each(records.begin(), records.end(), ptfn);
+  // Measuring the elapsed time
+  double end = omp_get_wtime();
+  // Time calculation (in seconds)
+  cout << "elpased time is: " << (end-start)
+       << " with resolution " << omp_get_wtick() << endl;
+
+//     cout << "sequential time" << endl;
+//   {
+//     vector < Record *> records;
+//     for (int i = 0; i < records_to_read; i++)
+//       {
+//         records.push_back(new Record);
+//         records.back()->SuckNextRecord(&*(rel->schema ()), tableFile);
+//       }
+//     //    cout << endl << "printing records" << endl;
+//     //  for_each(records.begin(), records.end(), ptfn);
+
+//     hijack_parser();
+
+//     OrderMaker sortorder;
+//     rel->get_sort_order (sortorder);
+//     cout << endl << "sorting records" << endl;
+//     start = omp_get_wtime();
+//     //#ifdef __gnu_parallel
+//     // __gnu_parallel::sort(records.begin(), records.end(), sorter(sortorder));
+//     // #else
+//     sort(records.begin(), records.end(), sorter(sortorder));
+//     // #endif
+//     end = omp_get_wtime();
+//     cout << "elpased time is: " << (end-start)
+//          << " with resolution " << omp_get_wtick() << endl;
+
+
+//     cout << endl << "sorted records" << endl;
+//     cout << "sorted " << records.size() << " records." << endl;
+//     //cout << endl << "printing records" << endl;
+//     //for_each(records.begin(), records.end(), de);
+//   }
+
+//     cout << "parallel time" << endl;
+// {
+//     vector < Record *> records;
+//     for (int i = 0; i < records_to_read; i++)
+//       {
+//         records.push_back(new Record);
+//         records.back()->SuckNextRecord(&*(rel->schema ()), tableFile);
+//       }
+//     //cout << endl << "printing records" << endl;
+//     //  for_each(records.begin(), records.end(), ptfn);
+
+//     hijack_parser();
+
+//     OrderMaker sortorder;
+//     rel->get_sort_order (sortorder);
+//     cout << endl << "sorting records" << endl;
+//     start = omp_get_wtime();
+//     //#ifdef __gnu_parallel
+//     __gnu_parallel::sort(records.begin(), records.end(), sorter(sortorder));
+//     // #else
+//     //sort(records.begin(), records.end(), sorter(sortorder));
+//     // #endif
+//     end = omp_get_wtime();
+//     cout << "elpased time is: " << (end-start)
+//          << " with resolution " << omp_get_wtick() << endl;
+
+
+//     cout << endl << "sorted records" << endl;
+//     cout << "sorted " << records.size() << " records." << endl;
+//     //cout << endl << "printing records" << endl;
+//     // for_each(records.begin(), records.end(), ptfn);
+//   }
+
+    cout << "auto chosen time" << endl;
+{
+    vector < Record> records;
+    for (int i = 0; i < records_to_read; i++)
+      {
+        cout << records.capacity() << endl;
+        cout << "about to create record" << endl;
+        records.push_back(*(new Record()));
+        cout << "created record, sucking data" << endl;
+        records.back().SuckNextRecord(rel->schema (), tableFile);
+        cout << "data sucked" << endl;
+      }
+    cout << records.size() << "records read" << endl;
+    // cout << endl << "printing records" << endl;
+    //   for_each(records.begin(), records.end(), ptfn);
+
+    hijack_parser();
+
+    OrderMaker sortorder;
+    rel->get_sort_order (sortorder);
+    cout << endl << "sorting records" << endl;
+    start = omp_get_wtime();
+    //    #ifdef __gnu_parallel
+    // cout << "compiler chose parallel version" << endl;
+    // __gnu_parallel::sort(records.begin(), records.end(), sorter(sortorder));
+    // #else
+    // cout << "compiler chose sequential version" << endl;
+    //sort(records.begin(), records.end(), sorter(sortorder));
+    // #endif
+    end = omp_get_wtime();
+    cout << "elpased time is: " << (end-start)
+         << " with resolution " << omp_get_wtick() << endl;
+
+
+    cout << endl << "sorted records" << endl;
+    cout << "sorted " << records.size() << " records." << endl;
+ // cout << endl << "printing records" << endl;
+ //     for_each(records.begin(), records.end(), ptfn);
+  }
 
 }
 
@@ -176,6 +314,8 @@ void testCompare()
   y.SuckNextRecord(&*(rel->schema ()), tableFile);
   x.Print (rel->schema());
   y.Print (rel->schema());
+
+  hijack_parser();
 
   OrderMaker sortorder;
   rel->get_sort_order (sortorder);
