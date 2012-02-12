@@ -7,17 +7,20 @@
 
 
 Record :: Record () {
+  cout << "constructor called" << endl;
 	bits = NULL;
 }
 
 Record :: Record (const Record & r)
 {
   cout << "copy constructor called" << endl;
-  if (bits != NULL) { // if ours is allocated
-	delete [] bits;
-  }
+  bits = NULL;
+  // if (bits != NULL) { // if ours is allocated
+  //       delete [] bits;
+  // }
         if (r.bits == NULL) // if the other guy isn't allocated 
-          {return;} // nothing to do, exit immediately
+          {        cout << "leaving copy constructor" << endl;
+            return;} // nothing to do, exit immediately
 	bits = new (std::nothrow) char[((int *) r.bits)[0]]; // otherwise, allocate our storage
 	if (bits == NULL) // handle errors if necessary
 	{
@@ -26,17 +29,18 @@ Record :: Record (const Record & r)
 	}
 
 	memcpy (bits, r.bits, ((int *) r.bits)[0]); // and make a copy
-  
+        cout << "leaving copy constructor" << endl;
 }
 
 Record & Record :: operator = (Record const & r)
 {
   cout << "assignment operator called" << endl;
-  if (this != &r)
+  if (this != &r) // make sure we are not assigning to self
     {
       delete [] bits;
       bits = NULL;
-      bits = r.bits;
+      bits = new (std::nothrow) char[((int *) r.bits)[0]]; // otherwise, allocate our storage
+      memcpy (bits, r.bits, ((int *) r.bits)[0]); // and make a copy
     }
   return *this;
 }

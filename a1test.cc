@@ -177,7 +177,7 @@ void testSort()
   cout << " tpch file will be loaded from " << tbl_path << endl;
   FILE *tableFile = fopen (tbl_path, "r");
   omp_set_num_threads(4);
-  static const int records_to_read = 5;
+  static const int records_to_read = 500;
 
   // Starting the time measurement
   double start = omp_get_wtime();
@@ -255,21 +255,64 @@ void testSort()
 //     // for_each(records.begin(), records.end(), ptfn);
 //   }
 
-    cout << "auto chosen time" << endl;
+//     cout << "auto chosen time" << endl;
+// {
+//     vector < Record> records;
+//     for (int i = 0; i < records_to_read; i++)
+//       {
+//         cout << records.capacity() << endl;
+//         cout << "about to create record" << endl;
+//         records.push_back(*(new Record()));
+//         cout << "created record, sucking data" << endl;
+//         records.back().SuckNextRecord(rel->schema (), tableFile);
+//         cout << "data sucked" << endl;
+//       }
+//     cout << records.size() << "records read" << endl;
+//     // cout << endl << "printing records" << endl;
+//     //   for_each(records.begin(), records.end(), ptfn);
+
+//     hijack_parser();
+
+//     OrderMaker sortorder;
+//     rel->get_sort_order (sortorder);
+//     cout << endl << "sorting records" << endl;
+//     start = omp_get_wtime();
+//     //    #ifdef __gnu_parallel
+//     // cout << "compiler chose parallel version" << endl;
+//     // __gnu_parallel::sort(records.begin(), records.end(), sorter(sortorder));
+//     // #else
+//     // cout << "compiler chose sequential version" << endl;
+//     //sort(records.begin(), records.end(), sorter(sortorder));
+//     // #endif
+//     end = omp_get_wtime();
+//     cout << "elpased time is: " << (end-start)
+//          << " with resolution " << omp_get_wtick() << endl;
+
+
+//     cout << endl << "sorted records" << endl;
+//     cout << "sorted " << records.size() << " records." << endl;
+//  // cout << endl << "printing records" << endl;
+//  //     for_each(records.begin(), records.end(), ptfn);
+//   }
+
+
+    cout << "alternate allocation" << endl;
 {
     vector < Record> records;
     for (int i = 0; i < records_to_read; i++)
       {
         cout << records.capacity() << endl;
         cout << "about to create record" << endl;
-        records.push_back(*(new Record()));
+        Record rr;
         cout << "created record, sucking data" << endl;
-        records.back().SuckNextRecord(rel->schema (), tableFile);
-        cout << "data sucked" << endl;
+        rr.SuckNextRecord(rel->schema (), tableFile);
+        cout << "pushing record" << endl;
+        records.push_back(rr);
+        cout << "record pushed" << endl;
       }
     cout << records.size() << "records read" << endl;
-    // cout << endl << "printing records" << endl;
-    //   for_each(records.begin(), records.end(), ptfn);
+     cout << endl << "printing records" << endl;
+       for_each(records.begin(), records.end(), ptfn);
 
     hijack_parser();
 
@@ -282,7 +325,7 @@ void testSort()
     // __gnu_parallel::sort(records.begin(), records.end(), sorter(sortorder));
     // #else
     // cout << "compiler chose sequential version" << endl;
-    //sort(records.begin(), records.end(), sorter(sortorder));
+    sort(records.begin(), records.end(), sorter(sortorder));
     // #endif
     end = omp_get_wtime();
     cout << "elpased time is: " << (end-start)
@@ -291,8 +334,8 @@ void testSort()
 
     cout << endl << "sorted records" << endl;
     cout << "sorted " << records.size() << " records." << endl;
- // cout << endl << "printing records" << endl;
- //     for_each(records.begin(), records.end(), ptfn);
+  cout << endl << "printing records" << endl;
+      for_each(records.begin(), records.end(), ptfn);
   }
 
 }
