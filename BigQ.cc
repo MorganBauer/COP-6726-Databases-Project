@@ -3,6 +3,7 @@
 #include <vector>
 #include <cstdlib>
 #include <iostream>
+#include <algorithm>
 
 struct sorter : public std::binary_function<Record *, Record *, bool>
 {
