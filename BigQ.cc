@@ -13,18 +13,24 @@ public:
   bool operator()(Record & _x, Record & _y) { ComparisonEngine comp;
     return  (comp.Compare(&_x, &_y, _so) < 0) ? true : false; }
   bool operator()(const Record & _x, const Record & _y) { ComparisonEngine comp;
-    return  (comp.Compare(const_cast<Record *>(&_x), const_cast<Record *>(&_y), _so) < 0) ? true : false; }
+    return  (comp.Compare(const_cast<Record *>(&_x), const_cast<Record *>(&_y), _so) < 0); }
   bool operator()(Record * _x, Record * _y) { ComparisonEngine comp;
     return  (comp.Compare((_x), (_y), _so) < 0) ? true : false; }
+};
+
+void intobuff(Record r)
+{
+  
 };
 
 BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
   // ComparisonEngine comp;
   // comp.Compare(&temp,&temp,&sortorder);
-
+  size_t vecsize = runlen; //good first guess
   // FIRST PHASE
   // read data from in pipe sort them into runlen pages
   vector<Record> runlenrecords;
+  runlenrecords.reserve(vecsize);
   // proof of concept, simplest thing that could possibly work
   // for completely broken values of work
   // this will need (runlen+1 pages)+1 record of memory,
@@ -54,13 +60,21 @@ BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
           }
           if ( pageCounter == runlen ) // if it's larger than runlen, we need to stop.
             {
+              // update probable max vector size to avoid copying in future iterations.
+              if (vecsize < runlenrecords.size())
+                {vecsize = runlenrecords.size();}
+              
               sorter s = sorter(sortorder);
               // sort the records we have in the runlen buffer.
-              cout << "sorting run " << endl; 
+              // cout << "sorting run " << endl; 
               std::sort(runlenrecords.begin(),
                         runlenrecords.end(),
                         sorter(sortorder));
-              cout << "run sorted " << endl;
+              // cout << "run sorted " << endl;
+              for (vector<Record>::iterator it = runlenrecords.begin(); it < runlenrecords.end(); it++)
+                { //cout << "inserted" << endl;
+                  out.Insert(&(*it));
+                }
               // write them out to disk. temp file somewhere?
               pageCounter = 0;// reset page counter
             }
@@ -68,11 +82,31 @@ BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
           runlenrecords.push_back(copy);// put the new record in
         }
     }
+
+  if (0 < runlenrecords.size())
+    {
+         if (vecsize < runlenrecords.size())
+                {vecsize = runlenrecords.size();}
+              
+              sorter s = sorter(sortorder);
+              // sort the records we have in the runlen buffer.
+              // cout << "sorting run " << endl; 
+              std::sort(runlenrecords.begin(),
+                        runlenrecords.end(),
+                        sorter(sortorder));
+              // cout << "run sorted " << endl;
+              for (vector<Record>::iterator it = runlenrecords.begin(); it < runlenrecords.end(); it++)
+                { //cout << "inserted" << endl;
+                  out.Insert(&(*it));
+                }
+     
+    } 
+
   // we've taken all the records out of the pipe
   // do one last internal sort, on the the buffer that we have
 
   {
-
+    cout << "maximum vector size needed was " << vecsize << endl;
   }
 
 
