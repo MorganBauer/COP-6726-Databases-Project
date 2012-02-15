@@ -129,8 +129,8 @@ public:
   sorter(OrderMaker so) : _so(&so){}
   bool operator()(Record & _x, Record & _y) { ComparisonEngine comp;
     return  (comp.Compare(&_x, &_y, _so) < 0) ? true : false; }
-  bool operator()(const Record & _x, const Record & _y) { ComparisonEngine comp;
-    return  (comp.Compare(const_cast<Record *>(&_x), const_cast<Record *>(&_y), _so) < 0) ? true : false; }
+    bool operator()(const Record & _x, const Record & _y) { ComparisonEngine comp;
+    return  (comp.Compare(const_cast<Record *>(&_x), const_cast<Record *>(&_y), _so) < 0); }
   bool operator()(Record * _x, Record * _y) { ComparisonEngine comp;
     return  (comp.Compare((_x), (_y), _so) < 0) ? true : false; }
 };
@@ -177,7 +177,7 @@ void testSort()
   cout << " tpch file will be loaded from " << tbl_path << endl;
   FILE *tableFile = fopen (tbl_path, "r");
   omp_set_num_threads(4);
-  static const int records_to_read = 500;
+  static const int records_to_read = 5;
 
   // Starting the time measurement
   double start = omp_get_wtime();
@@ -298,7 +298,7 @@ void testSort()
 
     cout << "alternate allocation" << endl;
 {
-    vector < Record> records;
+    vector <Record> records;
     for (int i = 0; i < records_to_read; i++)
       {
         cout << records.capacity() << endl;
