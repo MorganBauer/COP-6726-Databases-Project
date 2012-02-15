@@ -3,7 +3,7 @@
 #include <pthread.h>
 
 void * producer (void * arg) {
-
+  cout << "producer started" << endl;
   Pipe *myPipe = (Pipe *) arg;
 
   Record temp;
@@ -30,7 +30,7 @@ void * producer (void * arg) {
 }
 
 void * consumer (void * arg) {
-
+  cout << "consumer started" << endl;
   testutil * t = (testutil *) arg; // see if reinterpret_cast  works here later
 
   ComparisonEngine ceng;
@@ -45,7 +45,7 @@ void * consumer (void * arg) {
 
   int err = 0;
   int i = 0;
-
+  int counter = 0;
   // the idea here, is two different things.
   // last will hold whatever record that will end up being the last record we see
   // 
@@ -56,6 +56,11 @@ void * consumer (void * arg) {
   while (t->pipe->Remove (&rec[i%2])) { // get next guy.
     prev = last;
     last = &rec[i%2];
+
+    counter += 1;
+    if (counter%100000 == 0) {
+      cerr << " consumer: " << counter << endl;
+    }
 
     // the conditional works at the beginning.
     // if there is at least one thing in the the pipe
