@@ -1,5 +1,5 @@
 #include "BigQ.h"
-// #include "RecordSorter.h"
+#include <boost/thread.hpp>
 #include <vector>
 #include <cstdlib>
 #include <iostream>
@@ -18,12 +18,36 @@ public:
     return  (comp.Compare((_x), (_y), _so) < 0) ? true : false; }
 };
 
-void intobuff(Record r)
+BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen)
+  : in(in),out(out),sortorder(sortorder),runlen(runlen)
 {
-  
-};
+  pthread_create (&worker_thread, NULL, &BigQ::thread_starter, this);
+}
 
-BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
+// don't declare static
+// http://cplusplus.syntaxerrors.info/index.php?title=Cannot_declare_member_function_%E2%80%98static_int_Foo::bar%28%29%E2%80%99_to_have_static_linkage
+void * BigQ :: thread_starter(void *context)
+{
+  return reinterpret_cast<BigQ*> (context)->WorkerThread();
+}
+
+void * BigQ :: WorkerThread(void) {
+  PhaseOne();
+  // in pipe should be dead now.
+  
+  // SECOND PHASE
+  PhaseTwo();
+  
+  // Cleanup
+  
+  // finally shut down the out pipe
+  // this lets the consumer thread know that there will not be anything else put into the pipe
+  out.ShutDown ();
+  pthread_exit(NULL); // make our worker thread go away
+}
+
+void BigQ::PhaseOne(void)
+{
   // ComparisonEngine comp;
   // comp.Compare(&temp,&temp,&sortorder);
   size_t vecsize = runlen; //good first guess
@@ -63,10 +87,10 @@ BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
               // update probable max vector size to avoid copying in future iterations.
               if (vecsize < runlenrecords.size())
                 {vecsize = runlenrecords.size();}
-              
+
               sorter s = sorter(sortorder);
               // sort the records we have in the runlen buffer.
-              // cout << "sorting run " << endl; 
+              // cout << "sorting run " << endl;
               std::sort(runlenrecords.begin(),
                         runlenrecords.end(),
                         sorter(sortorder));
@@ -85,22 +109,22 @@ BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
 
   if (0 < runlenrecords.size())
     {
-         if (vecsize < runlenrecords.size())
-                {vecsize = runlenrecords.size();}
-              
-              sorter s = sorter(sortorder);
-              // sort the records we have in the runlen buffer.
-              // cout << "sorting run " << endl; 
-              std::sort(runlenrecords.begin(),
-                        runlenrecords.end(),
-                        sorter(sortorder));
-              // cout << "run sorted " << endl;
-              for (vector<Record>::iterator it = runlenrecords.begin(); it < runlenrecords.end(); it++)
-                { //cout << "inserted" << endl;
-                  out.Insert(&(*it));
-                }
-     
-    } 
+      if (vecsize < runlenrecords.size())
+        {vecsize = runlenrecords.size();}
+
+      sorter s = sorter(sortorder);
+      // sort the records we have in the runlen buffer.
+      // cout << "sorting run " << endl;
+      std::sort(runlenrecords.begin(),
+                runlenrecords.end(),
+                sorter(sortorder));
+      // cout << "run sorted " << endl;
+      for (vector<Record>::iterator it = runlenrecords.begin(); it < runlenrecords.end(); it++)
+        { //cout << "inserted" << endl;
+          out.Insert(&(*it));
+        }
+
+    }
 
   // we've taken all the records out of the pipe
   // do one last internal sort, on the the buffer that we have
@@ -109,16 +133,15 @@ BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen) {
     cout << "maximum vector size needed was " << vecsize << endl;
   }
 
+}
 
-  // SECOND PHASE
-
-
+void BigQ::PhaseTwo(void)
+{
   // construct priority queue over sorted runs and dump sorted data
   // into the out pipe
+  File f;
   // out.Insert(&temp);
 
-  // finally shut down the out pipe
-  out.ShutDown ();
 }
 
 BigQ::~BigQ () {
