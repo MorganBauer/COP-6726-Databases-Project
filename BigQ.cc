@@ -2,25 +2,30 @@
 #include <boost/thread.hpp>
 #include <vector>
 #include <cstdlib>
+#include <cstdio>
 #include <iostream>
+#include <utility>
 #include <algorithm>
+#include <cassert>
 
 struct sorter : public std::binary_function<Record *, Record *, bool>
 {
-  OrderMaker * _so;
+  OrderMaker & _so;
 public:
-  sorter(OrderMaker so) {this->_so = &so;}
-  bool operator()(Record & _x, Record & _y) { ComparisonEngine comp;
-    return  (comp.Compare(&_x, &_y, _so) < 0) ? true : false; }
+  // sorter(OrderMaker so) {this->_so = &so;}
+  sorter(OrderMaker so) :_so(so){}
+  // bool operator()(Record & _x, Record & _y) { ComparisonEngine comp;
+  //  return  (comp.Compare(&_x, &_y, _so) < 0) ? true : false; }
   bool operator()(const Record & _x, const Record & _y) { ComparisonEngine comp;
-    return  (comp.Compare(const_cast<Record *>(&_x), const_cast<Record *>(&_y), _so) < 0); }
-  bool operator()(Record * _x, Record * _y) { ComparisonEngine comp;
-    return  (comp.Compare((_x), (_y), _so) < 0) ? true : false; }
+    return  (comp.Compare(const_cast<Record *>(&_x), const_cast<Record *>(&_y), &_so) < 0); }
+  // bool operator()(Record * _x, Record * _y) { ComparisonEngine comp;
+  //   return  (comp.Compare((_x), (_y), _so) < 0) ? true : false; }
 };
 
 BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen)
-  : in(in),out(out),sortorder(sortorder),runlen(runlen)
+  : in(in),out(out),sortorder(sortorder),runlen(runlen), pagesInserted(0)
 {
+
   pthread_create (&worker_thread, NULL, &BigQ::thread_starter, this);
 }
 
@@ -28,18 +33,22 @@ BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen)
 // http://cplusplus.syntaxerrors.info/index.php?title=Cannot_declare_member_function_%E2%80%98static_int_Foo::bar%28%29%E2%80%99_to_have_static_linkage
 void * BigQ :: thread_starter(void *context)
 {
-  return reinterpret_cast<BigQ*> (context)->WorkerThread();
+  return reinterpret_cast<BigQ*>(context)->WorkerThread();
 }
 
 void * BigQ :: WorkerThread(void) {
+  char * partiallySortedFileTempFileName = "/tmp/zzzpartiallysorted";
+  partiallySortedFile.Open(0, partiallySortedFileTempFileName);
+  // FIRST PHASE
   PhaseOne();
   // in pipe should be dead now.
-  
+
   // SECOND PHASE
   PhaseTwo();
-  
+
+  partiallySortedFile.Close();
   // Cleanup
-  
+  // remove(partiallySortedFileTempFileName);
   // finally shut down the out pipe
   // this lets the consumer thread know that there will not be anything else put into the pipe
   out.ShutDown ();
@@ -61,7 +70,8 @@ void BigQ::PhaseOne(void)
   //  because we hang on to stuff after shoving a copy in a vector
   Page p;
   Record tempRecord;
-  int pageCounter = 0;
+  int pageReadCounter = 0;
+
   while (1 == in.Remove(&tempRecord)) // while we can take records out of the pipe, do so.
     {
       Record copy; // Append consumes the record, so I need to make a copy.
@@ -72,18 +82,19 @@ void BigQ::PhaseOne(void)
         }
       else // page is full
         {
-          pageCounter++; // increment page count, because we have a new page that we just filled.
-          // remember to add the page we got, but could not place in a page
+          // deal with page being full
+          pageReadCounter++;  // increment page count, because we have a new page that we just filled.
           p.EmptyItOut(); // erase the page contents.
-          { // put the record in the fresh page.
-            int pageFit = p.Append(&tempRecord); // put our page we couldn't fit in.
-            if (0 == pageFit)
-              {
-                exit(-1);
-              }
-          }
-          if ( pageCounter == runlen ) // if it's larger than runlen, we need to stop.
+          // remember to add the page we got, but could not place in a page
+          if (0 == p.Append(&tempRecord)) // put the record in the fresh page.
             {
+              exit(-1); // if we can't fit it after emptying it out, something is wrong.
+            }
+
+          if ( pageReadCounter == runlen ) // if it's larger than runlen, we need to stop.
+            {
+              cout << "finished getting a run, now to sort it" << endl;
+
               // update probable max vector size to avoid copying in future iterations.
               if (vecsize < runlenrecords.size())
                 {vecsize = runlenrecords.size();}
@@ -94,15 +105,13 @@ void BigQ::PhaseOne(void)
               std::sort(runlenrecords.begin(),
                         runlenrecords.end(),
                         sorter(sortorder));
+              cout << "run size " << runlenrecords.size() << endl;
               // cout << "run sorted " << endl;
-              for (vector<Record>::iterator it = runlenrecords.begin(); it < runlenrecords.end(); it++)
-                { //cout << "inserted" << endl;
-                  out.Insert(&(*it));
-                }
-              // write them out to disk. temp file somewhere?
-              pageCounter = 0;// reset page counter
+              writeSortedRunToFile(runlenrecords);
+
+              pageReadCounter = 0;// reset page counter
+              runlenrecords.clear(); // reset the temp vector buffer thing
             }
-          runlenrecords.clear(); // reset the temp vector buffer thing
           runlenrecords.push_back(copy);// put the new record in
         }
     }
@@ -118,14 +127,9 @@ void BigQ::PhaseOne(void)
       std::sort(runlenrecords.begin(),
                 runlenrecords.end(),
                 sorter(sortorder));
-      // cout << "run sorted " << endl;
-      for (vector<Record>::iterator it = runlenrecords.begin(); it < runlenrecords.end(); it++)
-        { //cout << "inserted" << endl;
-          out.Insert(&(*it));
-        }
-
+      cout << "last run sorted " << endl;
     }
-
+  writeSortedRunToFile(runlenrecords);
   // we've taken all the records out of the pipe
   // do one last internal sort, on the the buffer that we have
 
@@ -135,12 +139,48 @@ void BigQ::PhaseOne(void)
 
 }
 
+void BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
+{
+  // cout << "enter write sorted run to file"<< endl;
+  int pageStart = pagesInserted;
+  // now to write sorted records out to a file, first, we must fill a page ...
+  Page tp;
+  for (vector<Record>::iterator it = runlenrecords.begin(); it < runlenrecords.end(); it++)
+    {
+      Record trp;
+      trp.Consume(&(*it));
+      if(0 == tp.Append(&trp))
+        {
+          partiallySortedFile.AddPage(&tp,pagesInserted++);
+          tp.EmptyItOut();
+          tp.Append(&trp);
+        }
+    }
+  partiallySortedFile.AddPage(&tp,pagesInserted++);
+
+  int pageEnd = pagesInserted;
+  cout << "inserted " <<  pageEnd - pageStart << " pages" << endl;
+  make_pair(pageStart,pageEnd);
+  //assert(pginsertcount == runlen);
+}
+
 void BigQ::PhaseTwo(void)
 {
   // construct priority queue over sorted runs and dump sorted data
   // into the out pipe
-  File f;
-  // out.Insert(&temp);
+
+  off_t lastPage = partiallySortedFile.GetLength() - 1;
+  for(off_t curPage = 0;  curPage < lastPage; curPage++)
+    {
+      Page tp;
+      partiallySortedFile.GetPage(&tp,curPage);
+      Record temp;
+      while(1 == tp.GetFirst(&temp))
+        {
+          out.Insert(&temp);          
+        }
+    }
+
 
 }
 
