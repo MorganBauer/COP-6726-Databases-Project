@@ -8,8 +8,8 @@
 #include <iostream>
 #include <stdlib.h>
 
-#define verbose
-#define F_DEBUG
+// #define verbose 0
+// #define F_DEBUG 0
 
 Page :: Page () {
 	curSizeInBytes = sizeof (int);

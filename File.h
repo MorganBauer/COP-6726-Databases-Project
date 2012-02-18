@@ -74,6 +74,7 @@ public:
 	// are before the page to be written are zeroed out
 	void AddPage (Page *addMe, off_t whichPage);
 
+        void Append (Page *addMe);
 	// closes the file and returns the file length (in number of pages)
 	int Close ();
 
