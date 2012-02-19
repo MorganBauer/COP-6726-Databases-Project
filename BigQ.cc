@@ -122,7 +122,7 @@ void BigQ :: sortRuns(vector<Record> & runlenrecords)
 void BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
 {
   // cout << "enter write sorted run to file"<< endl;
-  int pageStart = pagesInserted;
+  off_t pageStart = pagesInserted;
   // now to write sorted records out to a file, first, we must fill a page ...
   Page tp;
   for (vector<Record>::iterator it = runlenrecords.begin(); it < runlenrecords.end(); it++)
@@ -138,7 +138,7 @@ void BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
     }
   partiallySortedFile.AddPage(&tp,pagesInserted++);
 
-  int pageEnd = pagesInserted;
+  off_t pageEnd = pagesInserted;
   cout << "inserted " <<  pageEnd - pageStart << " pages" << endl;
   runLocations.push_back(make_pair(pageStart,pageEnd));
 }
@@ -148,6 +148,15 @@ void BigQ::PhaseTwo(void)
   cout << "merging sorted runs" << endl; 
   // construct priority queue over sorted runs and dump sorted data
   // into the out pipe
+
+  // for each record we need from a specific page
+  // read specific page
+  // get record from page
+  // write modified page back
+
+  /* OR */
+
+  // read page into buffer of pages, when it is empty, get next page from that sequence if it is available, and write that out.
 
   // iterate through pages putting them all in the pipe directly
   off_t lastPage = partiallySortedFile.GetLength() - 1;

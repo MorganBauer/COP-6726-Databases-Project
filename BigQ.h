@@ -18,7 +18,7 @@ class BigQ {
   int runlen;
 
   File partiallySortedFile;
-  std::vector <pair <int,int> > runLocations;
+  std::vector <pair <off_t, off_t> > runLocations;
   int pagesInserted;
   int runCount;
 
