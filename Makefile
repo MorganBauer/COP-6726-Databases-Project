@@ -7,6 +7,8 @@ ifdef linux
 tag = -n
 endif
 
+again: clean all
+
 all: a1test a2-1test
 
 a2-2test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o

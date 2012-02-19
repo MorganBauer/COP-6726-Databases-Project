@@ -1,5 +1,5 @@
 #include "BigQ.h"
-#include <boost/thread.hpp>
+// #include <boost/thread.hpp>
 #include <vector>
 #include <cstdlib>
 #include <cstdio>
@@ -7,20 +7,6 @@
 #include <utility>
 #include <algorithm>
 #include <cassert>
-
-struct sorter : public std::binary_function<Record *, Record *, bool>
-{
-  OrderMaker & _so;
-public:
-  // sorter(OrderMaker so) {this->_so = &so;}
-  sorter(OrderMaker so) :_so(so){}
-  // bool operator()(Record & _x, Record & _y) { ComparisonEngine comp;
-  //  return  (comp.Compare(&_x, &_y, _so) < 0) ? true : false; }
-  bool operator()(const Record & _x, const Record & _y) { ComparisonEngine comp;
-    return  (comp.Compare(const_cast<Record *>(&_x), const_cast<Record *>(&_y), &_so) < 0); }
-  // bool operator()(Record * _x, Record * _y) { ComparisonEngine comp;
-  //   return  (comp.Compare((_x), (_y), _so) < 0) ? true : false; }
-};
 
 BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen)
   : in(in),out(out),sortorder(sortorder),runlen(runlen), pagesInserted(0)
@@ -37,7 +23,7 @@ void * BigQ :: thread_starter(void *context)
 }
 
 void * BigQ :: WorkerThread(void) {
-  char * partiallySortedFileTempFileName = "/tmp/zzzpartiallysorted";
+  char * partiallySortedFileTempFileName = "/tmp/zzzpartiallysorted"; // maybe set this per instance to a random filename
   partiallySortedFile.Open(0, partiallySortedFileTempFileName);
   // FIRST PHASE
   PhaseOne();
@@ -45,10 +31,10 @@ void * BigQ :: WorkerThread(void) {
 
   // SECOND PHASE
   PhaseTwo();
-
+  cout << "cleanup" << endl;
   partiallySortedFile.Close();
   // Cleanup
-  // remove(partiallySortedFileTempFileName);
+  // remove(partiallySortedFileTempFileName); // XXX TODO UNCOMMENT THIS IN FINAL VERSION
   // finally shut down the out pipe
   // this lets the consumer thread know that there will not be anything else put into the pipe
   out.ShutDown ();
@@ -57,8 +43,6 @@ void * BigQ :: WorkerThread(void) {
 
 void BigQ::PhaseOne(void)
 {
-  // ComparisonEngine comp;
-  // comp.Compare(&temp,&temp,&sortorder);
   size_t vecsize = runlen; //good first guess
   // FIRST PHASE
   // read data from in pipe sort them into runlen pages
@@ -94,17 +78,11 @@ void BigQ::PhaseOne(void)
           if ( pageReadCounter == runlen ) // if it's larger than runlen, we need to stop.
             {
               cout << "finished getting a run, now to sort it" << endl;
-
+              runCount++;
               // update probable max vector size to avoid copying in future iterations.
-              if (vecsize < runlenrecords.size())
-                {vecsize = runlenrecords.size();}
+              if (vecsize < runlenrecords.size()) {vecsize = runlenrecords.size();}
 
-              sorter s = sorter(sortorder);
-              // sort the records we have in the runlen buffer.
-              // cout << "sorting run " << endl;
-              std::sort(runlenrecords.begin(),
-                        runlenrecords.end(),
-                        sorter(sortorder));
+              sortRuns(runlenrecords);
               cout << "run size " << runlenrecords.size() << endl;
               // cout << "run sorted " << endl;
               writeSortedRunToFile(runlenrecords);
@@ -116,27 +94,29 @@ void BigQ::PhaseOne(void)
         }
     }
 
-  if (0 < runlenrecords.size())
-    {
-      if (vecsize < runlenrecords.size())
-        {vecsize = runlenrecords.size();}
-
-      sorter s = sorter(sortorder);
-      // sort the records we have in the runlen buffer.
-      // cout << "sorting run " << endl;
-      std::sort(runlenrecords.begin(),
-                runlenrecords.end(),
-                sorter(sortorder));
-      cout << "last run sorted " << endl;
-    }
-  writeSortedRunToFile(runlenrecords);
   // we've taken all the records out of the pipe
   // do one last internal sort, on the the buffer that we have
+  if (0 < runlenrecords.size())
+    {
+      if (vecsize < runlenrecords.size()) {vecsize = runlenrecords.size();}
+      runCount++;
+      sortRuns(runlenrecords);
+      cout << "last run sorted " << endl;
+      writeSortedRunToFile(runlenrecords);
+    }
 
-  {
-    cout << "maximum vector size needed was " << vecsize << endl;
-  }
+  runlenrecords.clear();
+  cout << "maximum vector size needed was " << vecsize << endl;
+}
 
+void BigQ :: sortRuns(vector<Record> & runlenrecords)
+{
+  // sort the records we have in the runlen buffer.
+  // cout << "sorting run " << endl;
+  std::sort(runlenrecords.begin(),
+            runlenrecords.end(),
+            Compare(sortorder));
+  cout << "run size " << runlenrecords.size() << endl;
 }
 
 void BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
@@ -160,15 +140,16 @@ void BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
 
   int pageEnd = pagesInserted;
   cout << "inserted " <<  pageEnd - pageStart << " pages" << endl;
-  make_pair(pageStart,pageEnd);
-  //assert(pginsertcount == runlen);
+  runLocations.push_back(make_pair(pageStart,pageEnd));
 }
 
 void BigQ::PhaseTwo(void)
 {
+  cout << "merging sorted runs" << endl; 
   // construct priority queue over sorted runs and dump sorted data
   // into the out pipe
 
+  // iterate through pages putting them all in the pipe directly
   off_t lastPage = partiallySortedFile.GetLength() - 1;
   for(off_t curPage = 0;  curPage < lastPage; curPage++)
     {
@@ -177,12 +158,13 @@ void BigQ::PhaseTwo(void)
       Record temp;
       while(1 == tp.GetFirst(&temp))
         {
-          out.Insert(&temp);          
+          out.Insert(&temp);
+          // cout << "put a record in the pipe" << endl;
         }
     }
-
-
+  cout << "phase two complete" << endl;
 }
 
 BigQ::~BigQ () {
+  runLocations.clear();
 }
