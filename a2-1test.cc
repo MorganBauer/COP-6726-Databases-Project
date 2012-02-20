@@ -70,6 +70,12 @@ void * consumer (void * arg) {
     // so really, we just need to make sure that prev is not NULL.
     if (NULL != prev && NULL != last) { // make sure neither is NULL, so that we can follow the pointers and compare them. works at both beginning and end.
       if (1 == ceng.Compare (prev, last, t->order)) { // wrong order coming out of the "sorted order" pipe
+        
+        cout << endl << endl << endl << "It was said that " << endl << endl << endl; 
+        prev->Print (rel->schema ());
+        cout << "was smaller than" << endl;
+        last->Print (rel->schema ());
+        cout << counter << endl;
         err++;
       }
       if (t->write) {
