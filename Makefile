@@ -1,4 +1,5 @@
-CC = g++ -O -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp -march=native
+CC = g++ -O -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp
+#  -march=native
 #-D_GLIBCXX_PARALLEL
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
 tag = -i
@@ -15,43 +16,49 @@ a2-2test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile
 	$(CC) -o a2-2test Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o -lfl -lpthread
 
 a2-2test.o: a2-2test.cc
-	$(CC) -g -c a2-2test.cc
+	$(CC)  -c a2-2test.cc
 
 a2-1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-1test.o
 	$(CC) -o a2-1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-1test.o -lfl -lpthread
 
 a2-11test.o: a2-1test.cc
-	$(CC) -g -c a2-1test.cc
+	$(CC)  -c a2-1test.cc
 
 a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o y.tab.o lex.yy.o a1test.o
 	$(CC) -o a1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o y.tab.o lex.yy.o a1test.o -lfl
 
 a1test.o: a1test.cc
-	$(CC) -g -c a1test.cc
+	$(CC)  -c a1test.cc
 
 main: Record.o Comparison.o ComparisonEngine.o Schema.o File.o y.tab.o lex.yy.o main.o
 	$(CC) -o main Record.o Comparison.o ComparisonEngine.o Schema.o File.o y.tab.o lex.yy.o main.o -lfl
 
 main.o: main.cc
-	$(CC) -g -c main.cc
+	$(CC)  -c main.cc
 
 Comparison.o: Comparison.cc
-	$(CC) -g -c Comparison.cc
+	$(CC)  -c Comparison.cc
 
 ComparisonEngine.o: ComparisonEngine.cc
-	$(CC) -g -c ComparisonEngine.cc
+	$(CC)  -c ComparisonEngine.cc
 
-DBFile.o: DBFile.cc
-	$(CC) -g -c DBFile.cc
+Pipe.o: Pipe.cc Pipe.h
+	$(CC)  -c Pipe.cc
 
-File.o: File.cc
-	$(CC) -g -c File.cc
+BigQ.o: BigQ.cc BigQ.h
+	$(CC)  -c BigQ.cc
+
+DBFile.o: DBFile.cc DBFile.h
+	$(CC)  -c DBFile.cc
+
+File.o: File.cc File.h
+	$(CC)  -c File.cc
 
 Record.o: Record.cc
-	$(CC) -g -c Record.cc
+	$(CC)  -c Record.cc
 
 Schema.o: Schema.cc
-	$(CC) -g -c Schema.cc
+	$(CC)  -c Schema.cc
 
 y.tab.o: Parser.y
 	yacc -d Parser.y
