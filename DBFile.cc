@@ -30,6 +30,7 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
     case tree: // fall through, not implemented
     default:
       cout << "I don't know what type of file that is. Doing Nothing." <<  endl;
+      exit(-1);
     }
 
   return 0;
@@ -100,21 +101,33 @@ int DBFile::Close () {
 
 void DBFile::Add (Record &rec) {
   Page tempPage; //
-  //cout << "getting page " << f.GetLength() << endl;
-  f.GetPage(&tempPage, f.GetLength() - 2 ); // get the last page with stuff in it.
-
-  if (0 == tempPage.Append(&rec)) // if the page is full
+  // cout << "getting page " << f.GetLength() << endl;
+  if (0 != f.GetLength())
     {
-      // f.AddPage(&tempPage,f.GetLength()-1); // don't add page, it's already there.
-      tempPage.EmptyItOut();
-      tempPage.Append(&rec);
-      f.AddPage(&tempPage,f.GetLength()-1); // new final page
+      f.GetPage(&tempPage, f.GetLength() - 2 ); // get the last page with stuff in it.
+      if (0 == tempPage.Append(&rec)) // if the page is full
+        {
+          // f.AddPage(&tempPage,f.GetLength()-1); // don't add page, it's already there.
+          tempPage.EmptyItOut();
+          tempPage.Append(&rec);
+          f.AddPage(&tempPage,f.GetLength()-1); // new final page
+        }
+      else // the page is not full (this is probably the more common case and we should flip the if/else order
+        {
+          f.AddPage(&tempPage,f.GetLength()-2); // same final page
+        }
     }
-  else // the page is not full (this is probably the more common case and we should flip the if/else order
+  else // special case, we have a fresh file.
     {
-      f.AddPage(&tempPage,f.GetLength()-2); // same final page
+      if (1 == tempPage.Append(&rec)) 
+        {
+          f.AddPage(&tempPage,0); // new final page
+        }
+      else  // ought to have been a fresh page, if it's full, can't do anything anyway.
+        {
+          exit(-1);
+      }
     }
-
 }
 
 int DBFile::GetNext (Record &fetchme) {
@@ -167,7 +180,7 @@ int DBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
       if (comp.Compare(&fetchme,&literal,&cnf)) // check the record
         {
           return 1;
-        } 
+        }
     }
   return 0;
 }
