@@ -44,10 +44,11 @@ class Run
   runID(rID), start_offset(start), end_offset(end), cur_offset(start), empty(false)
     { this->partiallySortedFile = partiallySortedFile;
       partiallySortedFile->GetPage(&p,start_offset);
-      cout << "Run constructor called" << partiallySortedFile->GetLength() << endl;}
+      // cout << "Run constructor called" << partiallySortedFile->GetLength() << endl;
+    }
   Run(const Run & rn)
     {
-      cout << "copy constructor called" << endl;
+      // cout << "copy constructor called" << endl;
       runID = rn.runID;
       start_offset = rn.start_offset;
       end_offset = rn.end_offset;
@@ -60,7 +61,7 @@ class Run
     }
   Run & operator= (const Run & rn)
     {
-      cout << "assignment operator called" << endl;
+      // cout << "assignment operator called" << endl;
       runID = rn.runID;
       start_offset = rn.start_offset;
       end_offset = rn.end_offset;
@@ -71,8 +72,9 @@ class Run
       partiallySortedFile->GetPage(&p,cur_offset);
     }
   ~Run ()
-    {cout << "Run destructor called" << endl;
-      cout << "destroyed run " << runID << endl;}
+    { // cout << "Run destructor called" << endl;
+      // cout << "destroyed run " << runID << endl;
+    }
   // returns true if a page was returned.
   bool getNextRecord(Record & ret)
   {
