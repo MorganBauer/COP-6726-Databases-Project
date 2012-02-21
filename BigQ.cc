@@ -185,7 +185,7 @@ void BigQ::PhaseTwo(void)
       {
         runs[i].print();
       }
-    
+
     vector<Record> minimums;
     // initialize minimums
     // for each run, get the first guy.
@@ -202,41 +202,45 @@ void BigQ::PhaseTwo(void)
     // now find the minimum guy and put it in the pipe
     // do this totalRecords times
     cout << "putting stuff in the pipe" << endl;
-    Compare c = Compare(sortorder);
-    int runsLeft = runCount;
-    for (int r = totalRecords ; r > 0; r--)
-      {
-        vector<Record>::iterator min = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));//Compare(sortorder));
-        vector<Record>::iterator::difference_type run = std::distance( minimums.begin(), min);
-        // cout << "record from run " << ((int)run) << " was chosen" << endl;
+    // Compare c = Compare(sortorder);
+    {
+      int runsLeft = runCount;
+      int recordsOut = 0;
+      for (int r = totalRecords ; r > 0; r--)
+        {
+          vector<Record>::iterator min = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));//Compare(sortorder));
+          vector<Record>::iterator::difference_type run = std::distance( minimums.begin(), min);
+          // cout << "record from run " << ((int)run) << " was chosen" << endl;
 
-        std::vector<Record>::iterator result = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));
-        // std::cout << "min element at: " << std::distance(minimums.begin(), result) << endl ;
-        long int d = std::distance(minimums.begin(), result) ;
-        vector<Record>::iterator::difference_type d2 = std::distance(minimums.begin(), result) ;
-        // cout << d << "&"<< d2 << endl;
-        
-        Record tr;
-        tr.Consume(&(minimums[run]));
-        out.Insert(&tr);
-        bool valid = runs[run].getNextRecord(tr);
-        if (valid)
-          {
-            minimums[run].Consume(&tr);
-          }
-        else
-          {
-            cout << "run empty, got to get rid of it" << endl;
-            runsLeft--;
-            minimums.erase(minimums.begin() + run);
-            runs.erase(runs.begin() + run);
-            // need to get rid of run and shift everything over
-          }
-      }
-    cout << minimums.size() << runs.size() << endl;
-    cout << "runs left = "<< runsLeft << endl;
-    assert (0 == runsLeft);
+          // std::vector<Record>::iterator result = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));
+          // std::cout << "min element at: " << std::distance(minimums.begin(), result) << endl ;
+          // long int d = std::distance(minimums.begin(), result) ;
+          // vector<Record>::iterator::difference_type d2 = std::distance(minimums.begin(), result) ;
+          // cout << d << "&"<< d2 << endl;
 
+          Record tr;
+          tr.Consume(&(minimums[run]));
+          recordsOut++;
+          out.Insert(&tr);
+          bool valid = runs[run].getNextRecord(tr);
+          if (valid)
+            {
+              minimums[run].Consume(&tr);
+            }
+          else
+            {
+              cout << "run empty, got to get rid of it" << endl;
+              runsLeft--;
+              minimums.erase(minimums.begin() + run);
+              runs.erase(runs.begin() + run);
+              // need to get rid of run and shift everything over
+            }
+        }
+      assert(recordsOut == totalRecords);
+      cout << minimums.size() << runs.size() << endl;
+      cout << "runs left = "<< runsLeft << endl;
+      assert (0 == runsLeft);
+    }
   }
 
   // construct priority queue over sorted runs and dump sorted data
@@ -282,22 +286,22 @@ void BigQ::PhaseTwo(void)
 
   // iterate through pages putting them all in the pipe directly
   /*
-  int totalRecordsOut = 0;
-  off_t lastPage = partiallySortedFile.GetLength() - 1;
-  for(off_t curPage = 0;  curPage < lastPage; curPage++)
+    int totalRecordsOut = 0;
+    off_t lastPage = partiallySortedFile.GetLength() - 1;
+    for(off_t curPage = 0;  curPage < lastPage; curPage++)
     {
-      Page tp;
-      partiallySortedFile.GetPage(&tp,curPage);
-      Record temp;
-      while(1 == tp.GetFirst(&temp))
-        {
-          totalRecordsOut++;
-          out.Insert(&temp);
-          // cout << "put a record in the pipe" << endl;
-        }
+    Page tp;
+    partiallySortedFile.GetPage(&tp,curPage);
+    Record temp;
+    while(1 == tp.GetFirst(&temp))
+    {
+    totalRecordsOut++;
+    out.Insert(&temp);
+    // cout << "put a record in the pipe" << endl;
     }
-  cout << totalRecordsOut << " Records written to pipe" << endl;
-  assert(totalRecordsOut == totalRecords);
+    }
+    cout << totalRecordsOut << " Records written to pipe" << endl;
+    assert(totalRecordsOut == totalRecords);
   */
   cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
   cout << "runlen of " << runlen << endl;
