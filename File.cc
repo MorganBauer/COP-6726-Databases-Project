@@ -169,7 +169,7 @@ void File :: GetPage (Page *putItHere, off_t whichPage) {
 	// this is because the first page has no data
 	whichPage++;
 
-	if (whichPage >= curLength) {
+	if (whichPage >= curLength || whichPage < 0) {
 		cerr << "whichPage " << whichPage << " length " << curLength << endl;
 		cerr << "BAD: you tried to read past the end of the file\n";
 		exit (1);
