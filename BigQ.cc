@@ -1,5 +1,4 @@
 #include "BigQ.h"
-// #include <boost/thread.hpp>
 #include <vector>
 #include <queue>
 #include <cstdlib>
@@ -9,6 +8,9 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+
+/* Morgan Bauer */
+
 BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen)
   : in(in),out(out),sortorder(sortorder),runlen(runlen), pagesInserted(0), runCount(0), totalRecords(0)
 {
@@ -34,7 +36,7 @@ void * BigQ :: WorkerThread(void) {
   cout << "cleanup" << endl;
   partiallySortedFile.Close();
   // Cleanup
-  // remove(partiallySortedFileTempFileName); // XXX TODO UNCOMMENT THIS IN FINAL VERSION
+  remove(partiallySortedFileTempFileName);
   // finally shut down the out pipe
   // this lets the consumer thread know that there will not be anything else put into the pipe
   out.ShutDown ();

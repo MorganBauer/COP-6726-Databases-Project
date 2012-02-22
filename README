@@ -1,8 +1,32 @@
-021008-1308
+Morgan Bauer
 
-readme 
+I have changed the way it works. This contains the first project program as well, so that I can always generate the tables.
+
+To compile the driver, type
+	make a2-1test
+
+To run the driver, type
+	./a2-1test
+and follow the on-screen instructions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+readme
 =========
-Test driver for Assignment 2 BigQ Milestone 1 (spring 2011 dbi) 
+Test driver for Assignment 2 BigQ Milestone 1 (spring 2011 dbi)
 
 This test driver gives a menu-based interface to three options that allows you
 to test your code:
@@ -53,11 +77,11 @@ CNF examples to specify sort order:
 dbfile      |  sortby                                  |  CNF
 ---------------------------------------------------------------------------------
 region      |  r_name 	 	                       | (r_name)
-       
+
 partsupp    |  ps_suppkey, ps_partkey 		       | (ps_suppkey) AND (ps_partkey)
 
-lineitem    |  l_shipdate, l_extendedprice, l_quantity | (l_shipdate) AND 
-							 (l_extendedprice) AND 
+lineitem    |  l_shipdate, l_extendedprice, l_quantity | (l_shipdate) AND
+							 (l_extendedprice) AND
 							 (l_quantity)
 (l_orderkey) AND (l_returnflag) AND (l_tax) AND (l_discount) AND (l_shipdate) AND (l_extendedprice) AND (l_quantity)
 
@@ -87,8 +111,8 @@ received off the output pipe on to the standard output
 3. sort + write -- dumps the records received from the output pipe into a heap
 dbfile (with the extension bigq)
 
-Submission Instructions: 
-========================= 
+Submission Instructions:
+=========================
 
 Same as a1 (Instead of creating directory a1, create directory a2. The turnin
 file should be called a2.tar.gz)
