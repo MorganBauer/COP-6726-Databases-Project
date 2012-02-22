@@ -12,7 +12,7 @@
 /* Morgan Bauer */
 
 BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen)
-  : in(in),out(out),sortorder(sortorder),runlen(runlen), pagesInserted(0), runCount(0), totalRecords(0)
+  : in(in),out(out),sortorder(sortorder),runlen(runlen), pagesInserted(0), totalRecords(0), runCount(0)
 {
   pthread_create (&worker_thread, NULL, &BigQ::thread_starter, this);
 }
@@ -36,7 +36,7 @@ void * BigQ :: WorkerThread(void) {
   cout << "cleanup" << endl;
   partiallySortedFile.Close();
   // Cleanup
-  remove(partiallySortedFileTempFileName);
+  //  remove(partiallySortedFileTempFileName);
   // finally shut down the out pipe
   // this lets the consumer thread know that there will not be anything else put into the pipe
   out.ShutDown ();
@@ -180,25 +180,29 @@ void BigQ::PhaseTwo(void)
         cout << "Run " << i;
         runs.push_back(Run(i,runLocations[i].first,runLocations[i].second, &partiallySortedFile));
         cout << " initialized" << endl;
-        runs[i].print();
+        // runs[i].print();
       }
 
     for (int i = 0; i < runCount; i++)
       {
         runs[i].print();
       }
+    
+    std::priority_queue<TaggedRecord, vector<TaggedRecord>, TaggedRecordCompare> mins (sortorder);
 
-    vector<Record> minimums;
+    // vector<Record> minimums;
     // initialize minimums
     // for each run, get the first guy.
     cout << "initializing minimums" << endl;
-    minimums.reserve(runCount);
+    // minimums.reserve(runCount);
     for (int i = 0; i < runCount; i++)
       {
         cout << "minimum " << i;
         Record tr;
         runs[i].getNextRecord(tr);
-        minimums.push_back(tr);
+        // minimums.push_back(tr);
+        cout << "push" << endl;
+        mins.push(TaggedRecord(tr,i));
         cout << "initialized " << endl;
       }
     // now find the minimum guy and put it in the pipe
@@ -210,36 +214,43 @@ void BigQ::PhaseTwo(void)
       int recordsOut = 0;
       for (int r = totalRecords ; r > 0; r--)
         {
-          vector<Record>::iterator min = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));//Compare(sortorder));
-          vector<Record>::iterator::difference_type run = std::distance( minimums.begin(), min);
+          
+          // vector<Record>::iterator min = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));//Compare(sortorder));
+          // vector<Record>::iterator::difference_type run = std::distance( minimums.begin(), min);
           // cout << "record from run " << ((int)run) << " was chosen" << endl;
+          TaggedRecord TRtr(mins.top());
+          Record tr(TRtr.r);
+          
+          
+          // cout << "record from run " << TRtr.getRun() << " was chosen" << endl;
+          // cout << "before pop" << endl;
+          // cout << "size " << mins.size() << endl;
 
-          // std::vector<Record>::iterator result = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));
-          // std::cout << "min element at: " << std::distance(minimums.begin(), result) << endl ;
-          // long int d = std::distance(minimums.begin(), result) ;
-          // vector<Record>::iterator::difference_type d2 = std::distance(minimums.begin(), result) ;
-          // cout << d << "&"<< d2 << endl;
-
-          Record tr;
-          tr.Consume(&(minimums[run]));
+          // cout << "after pop" << endl;
+          int run = TRtr.getRun();
+          
+          // tr.Consume(&(minimums[run]));
           recordsOut++;
           out.Insert(&tr);
+          // out.Insert(&tr);
+          mins.pop();
           bool valid = runs[run].getNextRecord(tr);
           if (valid)
             {
-              minimums[run].Consume(&tr);
+              mins.push(TaggedRecord(tr,run));
+              // minimums[run].Consume(&tr);
             }
           else
             {
               cout << "run empty, got to get rid of it" << endl;
               runsLeft--;
-              minimums.erase(minimums.begin() + run);
-              runs.erase(runs.begin() + run);
+              // minimums.erase(minimums.begin() + run);
+              // runs.erase(runs.begin() + run);
               // need to get rid of run and shift everything over
             }
         }
       assert(recordsOut == totalRecords);
-      cout << minimums.size() << runs.size() << endl;
+      // cout << minimums.size() << runs.size() << endl;
       cout << "runs left = "<< runsLeft << endl;
       assert (0 == runsLeft);
     }
