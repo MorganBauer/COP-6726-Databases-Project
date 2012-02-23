@@ -85,7 +85,7 @@ class Run
     else
       { // page was empty, get new page
         cur_offset++;
-        cout << cur_offset;
+        cout << cur_offset << " ";
         // check if out of bounds
         if (cur_offset < end_offset)
           {
@@ -154,7 +154,7 @@ class BigQ {
 
   void PhaseOne(void);
   void sortRuns(std::vector<Record> & runlenrecords);
-  void writeSortedRunToFile(std::vector<Record> & runlenrecords);
+  int writeSortedRunToFile(std::vector<Record> & runlenrecords);
 
   void PhaseTwo(void);
   void ReadModifyWrite(void);

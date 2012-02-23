@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <omp.h>
 
 /* Morgan Bauer */
 
@@ -25,6 +26,7 @@ void * BigQ :: thread_starter(void *context)
 }
 
 void * BigQ :: WorkerThread(void) {
+  double start = omp_get_wtime();
   char * partiallySortedFileTempFileName = "/tmp/zzzpartiallysorted"; // maybe set this per instance to a random filename
   partiallySortedFile.Open(0, partiallySortedFileTempFileName);
   // FIRST PHASE
@@ -40,6 +42,8 @@ void * BigQ :: WorkerThread(void) {
   // finally shut down the out pipe
   // this lets the consumer thread know that there will not be anything else put into the pipe
   out.ShutDown ();
+  double end = omp_get_wtime();
+  cout << endl << endl << endl << (end-start) << " seconds to run" << endl << endl << endl;
   pthread_exit(NULL); // make our worker thread go away
 }
 
@@ -87,8 +91,8 @@ void BigQ::PhaseOne(void)
               sortRuns(runlenrecords);
               cout << "run size " << runlenrecords.size() << endl;
               // cout << "run sorted " << endl;
-              writeSortedRunToFile(runlenrecords);
-
+              int numPagesWritten = writeSortedRunToFile(runlenrecords);
+              cout << numPagesWritten << " with runlen " << runlen << endl;
               pageReadCounter = 0;// reset page counter
               runlenrecords.clear(); // reset the temp vector buffer thing
             }
@@ -121,7 +125,7 @@ void BigQ :: sortRuns(vector<Record> & runlenrecords)
   cout << "run size " << runlenrecords.size() << endl;
 }
 
-void BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
+int BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
 {
   // cout << "enter write sorted run to file"<< endl;
   off_t pageStart = pagesInserted;
@@ -144,6 +148,7 @@ void BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
   off_t pageEnd = pagesInserted;
   cout << "inserted " <<  pageEnd - pageStart << " pages" << endl;
   runLocations.push_back(make_pair(pageStart,pageEnd));
+  return (int)(pageEnd-pageStart);
 }
 
 void BigQ::PhaseTwo(void)
