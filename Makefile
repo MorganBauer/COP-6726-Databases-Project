@@ -36,10 +36,10 @@ main: Record.o Comparison.o ComparisonEngine.o Schema.o File.o y.tab.o lex.yy.o 
 main.o: main.cc
 	$(CC)  -c main.cc
 
-Comparison.o: Comparison.cc
+Comparison.o: Comparison.cc Comparison.h
 	$(CC)  -c Comparison.cc
 
-ComparisonEngine.o: ComparisonEngine.cc
+ComparisonEngine.o: ComparisonEngine.cc ComparisonEngine.h
 	$(CC)  -c ComparisonEngine.cc
 
 Pipe.o: Pipe.cc Pipe.h
@@ -54,11 +54,14 @@ DBFile.o: DBFile.cc DBFile.h
 File.o: File.cc File.h
 	$(CC)  -c File.cc
 
-Record.o: Record.cc
+Record.o: Record.cc Record.h
 	$(CC)  -c Record.cc
 
-Schema.o: Schema.cc
+Schema.o: Schema.cc Schema.h
 	$(CC)  -c Schema.cc
+
+TwoWayList.o : TwoWayList.cc TwoWayList.h
+	$(CC)  -c TwoWayList.cc
 
 y.tab.o: Parser.y
 	yacc -d Parser.y
