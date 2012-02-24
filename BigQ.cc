@@ -8,11 +8,12 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <omp.h>
 
 /* Morgan Bauer */
 
-BigQ :: BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen)
-  : in(in),out(out),sortorder(sortorder),runlen(runlen), pagesInserted(0), runCount(0), totalRecords(0)
+BigQ :: BigQ (Pipe & _in, Pipe & _out, OrderMaker & _sortorder, int _runlen)
+  : in(_in),out(_out),sortorder(_sortorder),runlen(_runlen), pagesInserted(0), totalRecords(0), runCount(0), partiallySortedFile(), runLocations()
 {
   pthread_create (&worker_thread, NULL, &BigQ::thread_starter, this);
 }
@@ -32,7 +33,7 @@ void * BigQ :: WorkerThread(void) {
   // in pipe should be dead now.
   cout << totalRecords << " Records written to file" << endl;
   // SECOND PHASE
-  PhaseTwo();
+  PhaseTwoLinearScan();
   cout << "cleanup" << endl;
   partiallySortedFile.Close();
   // Cleanup
@@ -144,9 +145,10 @@ int BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
   off_t pageEnd = pagesInserted;
   cout << "inserted " <<  pageEnd - pageStart << " pages" << endl;
   runLocations.push_back(make_pair(pageStart,pageEnd));
+  return (int)(pageEnd-pageStart);
 }
 
-void BigQ::PhaseTwo(void)
+void BigQ::PhaseTwoLinearScan(void)
 {
   cout << endl << endl << "merging sorted runs" << endl;
   cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
@@ -155,23 +157,7 @@ void BigQ::PhaseTwo(void)
       cout << "from " << (*it).first << " to " << (*it).second << endl;
     }
 
-  { // Linear scan of minimums
-    // initialize page containers
-    /*{// alternate version of manual page management
-      vector<vector<Record > > pages;
-      for (int i; i < runCount; i++)
-      {
-      Page tp;
-      Record tr;
-
-      }
-      }*/
-
-    // Run(1,runLocations[1].first,runLocations[1].second, & partiallySortedFile);
-
-
-
-
+  {
     vector<Run> runs;
     runs.reserve(runCount);
     cout << "initializing runs" << endl;
@@ -210,15 +196,8 @@ void BigQ::PhaseTwo(void)
       int recordsOut = 0;
       for (int r = totalRecords ; r > 0; r--)
         {
-          vector<Record>::iterator min = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));//Compare(sortorder));
+          vector<Record>::iterator min = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));
           vector<Record>::iterator::difference_type run = std::distance( minimums.begin(), min);
-          // cout << "record from run " << ((int)run) << " was chosen" << endl;
-
-          // std::vector<Record>::iterator result = std::min_element(minimums.begin(), minimums.end(),Compare(sortorder));
-          // std::cout << "min element at: " << std::distance(minimums.begin(), result) << endl ;
-          // long int d = std::distance(minimums.begin(), result) ;
-          // vector<Record>::iterator::difference_type d2 = std::distance(minimums.begin(), result) ;
-          // cout << d << "&"<< d2 << endl;
 
           Record tr;
           tr.Consume(&(minimums[run]));
@@ -244,75 +223,9 @@ void BigQ::PhaseTwo(void)
       assert (0 == runsLeft);
     }
   }
-
-  // construct priority queue over sorted runs and dump sorted data
-  // into the out pipe
-
-  // Page tp;
-  // Record tr;
-
-  // partiallySortedFile.GetPage(&tp,0);
-  // tp.GetFirst(&tr);
-  // priority_queue<Record, vector<Record>, Compare > prioQueueOverRuns (Compare(sortorder));
-  // prioQueueOverRuns.push(tp);
-
-  // get first page of each run, put into extra vector
-  // git first record of each page, put into queue
-
-  // while (not empty)/(not finished)
-  // pull out minimum
-  // put into pipe.
-
-  /*
-    { // priority queue stuff, figure out later, if even worthwhile.
-    Record temp;
-    PQ pq(runCount, sortorder);
-    while( !pq.Empty() )
-    {
-    Record temp;
-    pq.getMinimum(temp);
-    out.Insert(&temp);
-    }
-    }
-  */
-
-  // for each record we need from a specific page
-  // read specific page
-  // get record from page
-  // write modified page back
-  ReadModifyWrite();
-
-  /* OR */
-
-  // read page into buffer of pages, when it is empty, get next page from that sequence if it is available, and write that out.
-
-  // iterate through pages putting them all in the pipe directly
-  /*
-    int totalRecordsOut = 0;
-    off_t lastPage = partiallySortedFile.GetLength() - 1;
-    for(off_t curPage = 0;  curPage < lastPage; curPage++)
-    {
-    Page tp;
-    partiallySortedFile.GetPage(&tp,curPage);
-    Record temp;
-    while(1 == tp.GetFirst(&temp))
-    {
-    totalRecordsOut++;
-    out.Insert(&temp);
-    // cout << "put a record in the pipe" << endl;
-    }
-    }
-    cout << totalRecordsOut << " Records written to pipe" << endl;
-    assert(totalRecordsOut == totalRecords);
-  */
   cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
   cout << "runlen of " << runlen << endl;
   cout << "phase two complete" << endl;
-}
-
-void BigQ::ReadModifyWrite(void)
-{
-  cout << "RMW" << endl;
 }
 
 BigQ::~BigQ () {

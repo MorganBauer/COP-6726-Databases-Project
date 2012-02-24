@@ -37,8 +37,8 @@ class Run
   /*   } cm; */
  public:
   // Run(int rID, off_t start, off_t end, OrderMaker & sortorder): runID(rID), start_offset(start), end_offset(end), cm(sortorder) { empty = false;}
- Run(int rID, off_t start, off_t end, File * partiallySortedFile):
-  runID(rID), start_offset(start), end_offset(end), cur_offset(start), p(), r(), empty(false), partiallySortedFile(partiallySortedFile)
+ Run(int rID, off_t start, off_t end, File * _partiallySortedFile):
+  runID(rID), start_offset(start), end_offset(end), cur_offset(start), p(), r(), empty(false), partiallySortedFile(_partiallySortedFile)
   { // this->partiallySortedFile = partiallySortedFile;
     partiallySortedFile->GetPage(&p,start_offset);
     // cout << "Run constructor called" << partiallySortedFile->GetLength() << endl;
@@ -141,11 +141,11 @@ class BigQ {
   OrderMaker sortorder;
   int runlen;
 
-  File partiallySortedFile;
-  std::vector <pair <off_t, off_t> > runLocations;
   int pagesInserted;
   int totalRecords;
   int runCount;
+  File partiallySortedFile;
+  std::vector <pair <off_t, off_t> > runLocations;
 
   pthread_t worker_thread;
 
@@ -156,15 +156,14 @@ class BigQ {
   void sortRuns(std::vector<Record> & runlenrecords);
   int writeSortedRunToFile(std::vector<Record> & runlenrecords);
 
-  void PhaseTwo(void);
-  void ReadModifyWrite(void);
+  void PhaseTwoLinearScan(void);
 
   class Compare : public std::binary_function <Record &, Record &, bool>
     {
     private:
       OrderMaker & so;
     public:
-    Compare(OrderMaker so) :so(so){}
+    Compare(OrderMaker _so) :so(_so){}
       bool operator()(const Record & x, const Record & y) { ComparisonEngine comp;
         return  (comp.Compare(const_cast<Record *>(&x), const_cast<Record *>(&y), &so) < 0); }
     };
