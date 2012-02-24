@@ -5,11 +5,8 @@
 
 #include "Comparison.h"
 
-
 Comparison::Comparison()
-{
-}
-
+{}
 
 Comparison::Comparison(const Comparison &copy_me)
 {
@@ -65,13 +62,11 @@ void Comparison :: Print () {
 
 
 
-OrderMaker :: OrderMaker() {
-	numAtts = 0;
-}
+OrderMaker :: OrderMaker() : numAtts(0)
+{}
 
-OrderMaker :: OrderMaker(Schema *schema) {
-	numAtts = 0;
-
+OrderMaker :: OrderMaker(Schema *schema) : numAtts(0)
+ {
 	int n = schema->GetNumAtts();
 	Attribute *atts = schema->GetAtts();
 
