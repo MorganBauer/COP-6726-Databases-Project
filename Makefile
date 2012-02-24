@@ -1,4 +1,4 @@
-CC = g++ -O -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp
+CC = g++ -O0 -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp
 #  -march=native
 #-D_GLIBCXX_PARALLEL
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
