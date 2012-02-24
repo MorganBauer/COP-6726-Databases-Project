@@ -121,7 +121,7 @@ void BigQ :: sortRuns(vector<Record> & runlenrecords)
   cout << "run size " << runlenrecords.size() << endl;
 }
 
-void BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
+int BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
 {
   // cout << "enter write sorted run to file"<< endl;
   off_t pageStart = pagesInserted;
