@@ -25,6 +25,8 @@ private:
 	pthread_cond_t producerVar;
 	pthread_cond_t consumerVar;
 
+        Pipe(const Pipe &);
+        Pipe operator=(const Pipe &);
 public:
 
 	// this sets up the pipeline; the parameter is the number of

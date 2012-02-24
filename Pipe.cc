@@ -3,7 +3,8 @@
 #include <iostream>
 #include <stdlib.h> 
 
-Pipe :: Pipe (int bufferSize) {
+Pipe :: Pipe (int bufferSize) : buffered(NULL), firstSlot(0), lastSlot(0), totSpace(bufferSize), done(0)
+{
 
 	// set up the mutex assoicated with the pipe
 	pthread_mutex_init (&pipeMutex, NULL);
@@ -20,8 +21,8 @@ Pipe :: Pipe (int bufferSize) {
 		exit(1);
 	}
 
-	totSpace = bufferSize;
-	firstSlot = lastSlot = 0;
+	// totSpace = bufferSize;
+	// firstSlot = lastSlot = 0;
 
 	// note that the pipe has not yet been turned off
 	done = 0;
