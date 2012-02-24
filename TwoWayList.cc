@@ -29,7 +29,7 @@ TwoWayList <Type> :: TwoWayList (TwoWayList &me) {
 
 // basic constructor function
 template <class Type>
-TwoWayList <Type> :: TwoWayList ()
+TwoWayList <Type> :: TwoWayList () : list(NULL)
 {
 
 	// allocate space for the header

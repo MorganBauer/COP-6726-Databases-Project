@@ -11,9 +11,9 @@
 // #define verbose 0
 // #define F_DEBUG 0
 
-Page :: Page () {
-	curSizeInBytes = sizeof (int);
-	numRecs = 0;
+Page :: Page () : myRecs(NULL), numRecs(0), curSizeInBytes(sizeof (int))
+{
+        // curSizeInBytes = sizeof (int);
 
 	myRecs = new (std::nothrow) TwoWayList<Record>;
 	if (myRecs == NULL)
@@ -156,13 +156,10 @@ void Page :: FromBinary (char *bits) {
 	delete temp;
 }
 
-File :: File () {
-  curLength = 0;
-}
+File :: File () : myFilDes(0), curLength(0)
+{}
 
-File :: ~File () {
-}
-
+File :: ~File () {}
 
 void File :: GetPage (Page *putItHere, off_t whichPage) {
 

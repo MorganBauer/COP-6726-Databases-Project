@@ -17,7 +17,9 @@ private:
 	
 	int numRecs;
 	int curSizeInBytes;
-
+        
+        Page(const Page &);
+        Page operator=(const Page &);
 public:
 	// constructor
 	Page ();

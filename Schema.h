@@ -17,7 +17,9 @@ struct Attribute {
 
 class OrderMaker;
 class Schema {
-
+ private:
+  Schema operator=(const Schema&);
+  Schema(const Schema&);
 	// gives the attributes in the schema
 	int numAtts;
 	Attribute *myAtts;

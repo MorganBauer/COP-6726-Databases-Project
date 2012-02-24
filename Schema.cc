@@ -36,8 +36,8 @@ Attribute *Schema :: GetAtts () {
 	return myAtts;
 }
 
-Schema :: Schema (char *fName, char *relName) {
-
+Schema :: Schema (char *fName, char *relName) : numAtts(0), myAtts(NULL), fileName(NULL)
+{
 	FILE *foo = fopen (fName, "r");
 	
 	// this is enough space to hold any tokens

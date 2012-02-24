@@ -11,9 +11,8 @@
 #include <cstdlib>
 /* Morgan Bauer */
 
-DBFile::DBFile () {
-
-}
+DBFile::DBFile () : f(), curPage(), curPageIndex(0)
+{}
 
 int DBFile::Create (char *f_path, fType f_type, void *startup) {
 

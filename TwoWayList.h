@@ -60,6 +60,9 @@ class TwoWayList {
 			{
 				delete data;
 			}
+                private:
+                  Node(const Node &);
+                  Node operator= (const Node &);
 		};
 
 

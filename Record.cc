@@ -6,18 +6,13 @@
 #include <iostream>
 
 
-Record :: Record () {
-  // cout << "constructor called" << endl;
-  bits = NULL;
-}
+Record :: Record () : bits(NULL)
+{}
 
-Record :: Record (const Record & r)
+Record :: Record (const Record & r) : bits(NULL)
 {
-  // cout << "copy constructor called" << endl;
-  bits = NULL;
   if (r.bits == NULL) // if the other guy isn't allocated
     {
-      // cout << "leaving copy constructor" << endl;
       return; // nothing to do, exit immediately
     }
   bits = new (std::nothrow) char[((int *) r.bits)[0]]; // otherwise, allocate our storage
@@ -26,9 +21,7 @@ Record :: Record (const Record & r)
       cout << "ERROR : Not enough memory. EXIT !!!\n";
       exit(1);
     }
-
   memcpy (bits, r.bits, ((int *) r.bits)[0]); // and make a copy
-  // cout << "leaving copy constructor" << endl;
 }
 
 Record & Record :: operator = (Record const & r)
@@ -159,9 +152,9 @@ int Record :: SuckNextRecord (Schema *mySchema, FILE *textFile) {
 }
 
 
-void Record :: SetBits (char *bits) {
+void Record :: SetBits (char * _bits) {
   delete [] this->bits;
-  this->bits = bits;
+  this->bits = _bits;
 }
 
 char* Record :: GetBits (void) {
@@ -169,7 +162,7 @@ char* Record :: GetBits (void) {
 }
 
 
-void Record :: CopyBits(char *bits, int b_len) {
+void Record :: CopyBits(char * _bits, int b_len) {
 
   delete [] this->bits;
 
@@ -180,7 +173,7 @@ void Record :: CopyBits(char *bits, int b_len) {
       exit(1);
     }
 
-  memcpy (this->bits, bits, b_len);
+  memcpy (this->bits, _bits, b_len);
 
 }
 
