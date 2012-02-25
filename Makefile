@@ -1,6 +1,5 @@
-CC = g++ -O -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp
-#  -march=native
-#-D_GLIBCXX_PARALLEL
+CC = g++ -O0 -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb -fopenmp
+# -D_GLIBCXX_PARALLEL -march=native
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
 tag = -i
 
@@ -10,10 +9,10 @@ endif
 
 again: clean all
 
-all: a1test a2-1test
+all: a1test a2-1test a22.out
 
-a2-2test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o
-	$(CC) -o a2-2test Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o -lfl -lpthread
+a22.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o
+	$(CC) -o a22.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o -lfl -lpthread
 
 a2-2test.o: a2-2test.cc
 	$(CC)  -c a2-2test.cc
