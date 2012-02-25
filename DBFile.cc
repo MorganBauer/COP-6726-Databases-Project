@@ -7,6 +7,8 @@
 #include "DBFile.h"
 #include "Defs.h"
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <cassert>
 #include <cstdlib>
 /* Morgan Bauer */
@@ -14,7 +16,45 @@
 DBFile::DBFile () : f(), curPage(), curPageIndex(0)
 {}
 
+int DBFile::Open (char *f_path) {
+  // TODO
+  // remember switch statement and metadata file later.
+  {
+    string metafileName;
+    metafileName.append(f_path);
+    metafileName.append(".meta");
+    ifstream metafile;
+    metafile.open(metafileName.c_str());
+    int t;
+    metafile >> t;
+    fType dbfileType = (fType) t;
+    metafile.close();
+    cout << "file type is " << dbfileType << endl;
+  }
+  f.Open(1, f_path);
+  return 0;
+}
+
+struct SortInfo {
+  OrderMaker *myOrder;
+  int runLength;
+};
+
 int DBFile::Create (char *f_path, fType f_type, void *startup) {
+  {
+    string metafileName;
+    metafileName.append(f_path);
+    metafileName.append(".meta");
+    ofstream metafile;
+    metafile.open(metafileName.c_str());
+    metafile << f_type;
+    if(sorted == f_type)
+      {
+        ((SortInfo *)startup)->myOrder->Print();
+      } 
+    metafile.close();
+    cout << "file type is " << f_type << endl;
+  }
 
   f.Open(0,f_path); // open, with 0 to create, giving it the path.
 
@@ -22,11 +62,15 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
     {
     case heap:
       cout << "This is a heap file. Operating in heap mode." <<  endl;
-      cout << "Writing metadata file as " << f_path <<".header" << endl;
+      cout << "Writing metadata file as " << f_path <<".meta" << endl;
       // make extra file with .header attached to tell us about this heap type db file
       break;
     case sorted: // fall through, not implemented
+      cout << "a sorted dbfile" << endl;
+      exit(-1);
     case tree: // fall through, not implemented
+      cout << "a b-plus tree dbfile" << endl;
+      exit(-1);
     default:
       cout << "I don't know what type of file that is. Doing Nothing." <<  endl;
       exit(-1);
@@ -69,13 +113,6 @@ void DBFile::Load (Schema &f_schema, char *loadpath) {
     cout << "Read and converted " << recordCounter <<
       " records, into " << pageCounter << " pages." << endl;
   }
-}
-
-int DBFile::Open (char *f_path) {
-  // TODO
-  // remember switch statement and metadata file later.
-  f.Open(1, f_path);
-  return 0;
 }
 
 void DBFile::MoveFirst () {
