@@ -33,7 +33,16 @@ void * BigQ :: WorkerThread(void) {
   // in pipe should be dead now.
   cout << totalRecords << " Records written to file" << endl;
   // SECOND PHASE
-  PhaseTwoLinearScan();
+  static const int runThreshold = 200;
+  if (runThreshold >= runCount)
+    {
+      PhaseTwoLinearScan();
+    }
+  else
+    {
+      PhaseTwoPriorityQueue();
+    }
+
   cout << "cleanup" << endl;
   partiallySortedFile.Close();
   // Cleanup
@@ -150,7 +159,7 @@ int BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
 
 void BigQ::PhaseTwoLinearScan(void)
 {
-  cout << endl << endl << "merging sorted runs" << endl;
+  cout << endl << endl << "Linear Scan Merge of sorted runs" << endl;
   cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
   for (std::vector < std::pair <off_t,off_t> >::iterator it = runLocations.begin(); it < runLocations.end(); it++)
     {
@@ -219,6 +228,85 @@ void BigQ::PhaseTwoLinearScan(void)
         }
       assert(recordsOut == totalRecords);
       cout << minimums.size() << runs.size() << endl;
+      cout << "runs left = "<< runsLeft << endl;
+      assert (0 == runsLeft);
+    }
+  }
+  cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
+  cout << "runlen of " << runlen << endl;
+  cout << "phase two complete" << endl;
+}
+
+void BigQ::PhaseTwoPriorityQueue(void)
+{
+  cout << endl << endl << "Priority Queue Merge of sorted runs" << endl;
+  cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
+  for (std::vector < std::pair <off_t,off_t> >::iterator it = runLocations.begin(); it < runLocations.end(); it++)
+    {
+      cout << "from " << (*it).first << " to " << (*it).second << endl;
+    }
+
+  {
+    vector<Run> runs;
+    runs.reserve(runCount);
+    cout << "initializing runs" << endl;
+    for (int i = 0; i < runCount; i++)
+      {
+        cout << "Run " << i;
+        runs.push_back(Run(i,runLocations[i].first,runLocations[i].second, &partiallySortedFile));
+        cout << " initialized" << endl;
+      }
+
+    for (int i = 0; i < runCount; i++)
+      {
+        runs[i].print();
+      }
+
+    std::priority_queue<TaggedRecord, vector<TaggedRecord>, TaggedRecordCompare> mins (sortorder);
+
+    // initialize minimums
+    // for each run, get the first guy.
+    cout << "initializing minimums" << endl;
+    // minimums.reserve(runCount);
+    for (int i = 0; i < runCount; i++)
+      {
+        cout << "minimum " << i;
+        Record tr;
+        runs[i].getNextRecord(tr);
+        // minimums.push_back(tr);
+        cout << "push" << endl;
+        mins.push(TaggedRecord(tr,i));
+        cout << "initialized " << endl;
+      }
+    // now find the minimum guy and put it in the pipe
+    // do this totalRecords times
+    cout << "putting stuff in the pipe" << endl;
+    // Compare c = Compare(sortorder);
+    {
+      int runsLeft = runCount;
+      int recordsOut = 0;
+      for (int r = totalRecords ; r > 0; r--)
+        {
+          TaggedRecord TRtr(mins.top());
+          Record tr(TRtr.r);
+
+          int run = TRtr.getRun();
+
+          recordsOut++;
+          out.Insert(&tr);
+          mins.pop();
+          bool valid = runs[run].getNextRecord(tr);
+          if (valid)
+            {
+              mins.push(TaggedRecord(tr,run));
+            }
+          else
+            {
+              cout << "run empty, got to get rid of it" << endl;
+              runsLeft--;
+            }
+        }
+      assert(recordsOut == totalRecords);
       cout << "runs left = "<< runsLeft << endl;
       assert (0 == runsLeft);
     }

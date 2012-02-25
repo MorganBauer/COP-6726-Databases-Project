@@ -157,7 +157,8 @@ class BigQ {
   int writeSortedRunToFile(std::vector<Record> & runlenrecords);
 
   void PhaseTwoLinearScan(void);
-
+  void PhaseTwoPriorityQueue(void);
+  
   class Compare : public std::binary_function <Record &, Record &, bool>
     {
     private:
