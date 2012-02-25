@@ -15,7 +15,8 @@
 char *dbfile_dir = "/tmp/mhb/"; // dir where binary heap files should be stored
 // char *tpch_dir ="/cise/tmp/dbi_sp11/DATA/1G/"; // dir where dbgen tpch files (extension *.tbl) can be found
 #ifdef linux
-char *tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
+// char *tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
+char *tpch_dir ="/cise/homes/mhb/dbi/origData/"; 
 #elif __MACH__
 char *tpch_dir ="/Users/morganbauer/Downloads/tpch_2_14_3/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
 #endif
