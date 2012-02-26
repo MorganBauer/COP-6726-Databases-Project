@@ -23,8 +23,8 @@ a2-1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile
 a2-11test.o: a2-1test.cc
 	$(CC)  -c a2-1test.cc
 
-a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o y.tab.o lex.yy.o a1test.o
-	$(CC) -o a1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o y.tab.o lex.yy.o a1test.o -lfl
+a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o y.tab.o lex.yy.o a1test.o
+	$(CC) -o a1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o y.tab.o lex.yy.o a1test.o -lfl
 
 a1test.o: a1test.cc
 	$(CC)  -c a1test.cc
@@ -46,6 +46,18 @@ Pipe.o: Pipe.cc Pipe.h
 
 BigQ.o: BigQ.cc BigQ.h
 	$(CC)  -c BigQ.cc
+
+BPlusDBFile.o: BPlusDBFile.cc BPlusDBFile.h
+	$(CC)  -c BPlusDBFile.cc
+
+SortedDBFile.o: SortedDBFile.cc SortedDBFile.h
+	$(CC)  -c SortedDBFile.cc
+
+HeapDBFile.o: HeapDBFile.cc HeapDBFile.h
+	$(CC)  -c HeapDBFile.cc
+
+GenericDBFile.o: GenericDBFile.cc GenericDBFile.h
+	$(CC)  -c GenericDBFile.cc
 
 DBFile.o: DBFile.cc DBFile.h
 	$(CC)  -c DBFile.cc

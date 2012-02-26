@@ -7,11 +7,18 @@
 #include "File.h"
 #include "Comparison.h"
 #include "ComparisonEngine.h"
+#include "DBFileDefs.h"
+#include "GenericDBFile.h"
+#include "HeapDBFile.h"
+#include "SortedDBFile.h"
+#include "BPlusDBFile.h"
 
-typedef enum {heap, sorted, tree} fType;
+
 
 class DBFile {
  private:
+
+  GenericDBFile * dbf;
 
   File f;
   Page curPage;

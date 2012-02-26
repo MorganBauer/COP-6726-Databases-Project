@@ -18,7 +18,9 @@ DBFile::DBFile () : f(), curPage(), curPageIndex(0)
 
 int DBFile::Open (char *f_path) {
   // TODO
-  // remember switch statement and metadata file later.
+  // read metadata file later
+  // switch statement dispatch of appropriate underneath type
+  //
   {
     string metafileName;
     metafileName.append(f_path);
@@ -52,18 +54,18 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
       {
         ((SortInfo *)startup)->myOrder->Print();
       } 
+    if(!metafile) return 1;
     metafile.close();
     cout << "file type is " << f_type << endl;
   }
-
-  f.Open(0,f_path); // open, with 0 to create, giving it the path.
 
   switch(f_type)
     {
     case heap:
       cout << "This is a heap file. Operating in heap mode." <<  endl;
       cout << "Writing metadata file as " << f_path <<".meta" << endl;
-      // make extra file with .header attached to tell us about this heap type db file
+      dbf = new HeapDBFile();
+      return dbf->Create(f_path, f_type, startup);
       break;
     case sorted: // fall through, not implemented
       cout << "a sorted dbfile" << endl;
@@ -80,6 +82,8 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
 }
 
 void DBFile::Load (Schema &f_schema, char *loadpath) {
+  dbf->Load(f_schema,loadpath);
+  return;
   // loadpath is path to '.tbl' file
   // we need to iterate thorugh the whole table writing it to the file.
   FILE *tableFile = fopen (loadpath, "r");
@@ -121,18 +125,9 @@ void DBFile::MoveFirst () {
   f.GetPage(&curPage, curPageIndex);
 }
 
-int DBFile::Close () {
-  // possibly also write out information to the metadata file before closing.
-
-  int fsize = f.Close();
-  if (fsize >= 0) // check that file size is positive. This is the only rational test I can come up with at this time.
-    {
-      return 1;
-    }
-  else
-    {
-      return 0; //failure, negative file size, or some other error.
-    }
+int DBFile::Close () 
+{
+  dbf->Close();
 }
 
 void DBFile::Add (Record &rec) {
