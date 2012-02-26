@@ -13,7 +13,7 @@
 #include <cstdlib>
 /* Morgan Bauer */
 
-DBFile::DBFile () : f(), curPage(), curPageIndex(0)
+DBFile::DBFile () : dbf(NULL)
 {}
 
 int DBFile::Open (char *f_path) {
@@ -27,20 +27,33 @@ int DBFile::Open (char *f_path) {
     metafileName.append(".meta");
     ifstream metafile;
     metafile.open(metafileName.c_str());
+    if(!metafile) return 1;
     int t;
     metafile >> t;
+    if(!metafile) return 1;
     fType dbfileType = (fType) t;
     metafile.close();
     cout << "file type is " << dbfileType << endl;
+   
+    switch(t)
+      {
+      case heap:
+        dbf = new HeapDBFile();
+        break;
+      case sorted: // fall through, not implemented
+        cout << "open a sorted dbfile" << endl;
+        // dbf = new SortedDBFile();
+        exit(-1);
+      case tree: // fall through, not implemented
+        cout << "open a b-plus tree dbfile" << endl;
+        exit(-1);
+      default:
+        cout << "I don't know what type of file that is. Doing Nothing." <<  endl;
+        exit(-1);
+      }
   }
-  f.Open(1, f_path);
-  return 0;
+  return dbf->Open(f_path);
 }
-
-struct SortInfo {
-  OrderMaker *myOrder;
-  int runLength;
-};
 
 int DBFile::Create (char *f_path, fType f_type, void *startup) {
   {
@@ -49,11 +62,12 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
     metafileName.append(".meta");
     ofstream metafile;
     metafile.open(metafileName.c_str());
+    if(!metafile) return 1;
     metafile << f_type;
     if(sorted == f_type)
       {
         ((SortInfo *)startup)->myOrder->Print();
-      } 
+      }
     if(!metafile) return 1;
     metafile.close();
     cout << "file type is " << f_type << endl;
@@ -65,100 +79,36 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
       cout << "This is a heap file. Operating in heap mode." <<  endl;
       cout << "Writing metadata file as " << f_path <<".meta" << endl;
       dbf = new HeapDBFile();
-      return dbf->Create(f_path, f_type, startup);
       break;
     case sorted: // fall through, not implemented
-      cout << "a sorted dbfile" << endl;
+      cout << "create a sorted dbfile" << endl;
+      // dbf = new SortedDBFile();
       exit(-1);
     case tree: // fall through, not implemented
-      cout << "a b-plus tree dbfile" << endl;
+      cout << "create a b-plus tree dbfile" << endl;
       exit(-1);
     default:
       cout << "I don't know what type of file that is. Doing Nothing." <<  endl;
       exit(-1);
     }
-
-  return 0;
+  return dbf->Create(f_path, f_type, startup);;
 }
 
 void DBFile::Load (Schema &f_schema, char *loadpath) {
   dbf->Load(f_schema,loadpath);
-  return;
-  // loadpath is path to '.tbl' file
-  // we need to iterate thorugh the whole table writing it to the file.
-  FILE *tableFile = fopen (loadpath, "r");
-  if (0 == tableFile)
-    exit(-1);
-  Record tempRecord;
-  Page tempPage;
-  int recordCounter = 0; // counter for debug
-  int pageCounter = 0; // counter for debug
-
-  while (1 == tempRecord.SuckNextRecord (&f_schema, tableFile))
-    { // there is another record available
-      assert(pageCounter >= 0);
-      assert(recordCounter >= 0);
-      recordCounter++;
-      if (recordCounter % 10000 == 0) {
-        cerr << recordCounter << "\n";
-      }
-      // use tempRecord, and put into tempPage. Later if page is full, write to file,
-      int full = tempPage.Append(&tempRecord);
-      if (0 == full)
-        {
-          // page was full
-          f.AddPage(&tempPage,pageCounter++);
-          tempPage.EmptyItOut();
-          tempPage.Append(&tempRecord);
-        }
-    }
-  { // make sure to add the last page
-    f.AddPage(&tempPage,pageCounter++);
-    cout << "Read and converted " << recordCounter <<
-      " records, into " << pageCounter << " pages." << endl;
-  }
 }
 
 void DBFile::MoveFirst () {
-  // consider keeping an index value, rather than holding the page itself.
-  curPageIndex = (off_t) 0;
-  f.GetPage(&curPage, curPageIndex);
+  dbf->MoveFirst();
 }
 
-int DBFile::Close () 
+int DBFile::Close ()
 {
-  dbf->Close();
+  return dbf->Close();
 }
 
 void DBFile::Add (Record &rec) {
-  Page tempPage; //
-  // cout << "getting page " << f.GetLength() << endl;
-  if (0 != f.GetLength())
-    {
-      f.GetPage(&tempPage, f.GetLength() - 2 ); // get the last page with stuff in it.
-      if (0 == tempPage.Append(&rec)) // if the page is full
-        {
-          // f.AddPage(&tempPage,f.GetLength()-1); // don't add page, it's already there.
-          tempPage.EmptyItOut();
-          tempPage.Append(&rec);
-          f.AddPage(&tempPage,f.GetLength()-1); // new final page
-        }
-      else // the page is not full (this is probably the more common case and we should flip the if/else order
-        {
-          f.AddPage(&tempPage,f.GetLength()-2); // same final page
-        }
-    }
-  else // special case, we have a fresh file.
-    {
-      if (1 == tempPage.Append(&rec)) 
-        {
-          f.AddPage(&tempPage,0); // new final page
-        }
-      else  // ought to have been a fresh page, if it's full, can't do anything anyway.
-        {
-          exit(-1);
-      }
-    }
+  dbf->Add(rec);
 }
 
 int DBFile::GetNext (Record &fetchme) {
@@ -173,45 +123,11 @@ int DBFile::GetNext (Record &fetchme) {
     case, for example, if the last record in the file has already been
     returned).
   */
-
-  if(0 == curPage.GetFirst(&fetchme)) // 0 is empty
-    { // page is empty, get next page, if available, and return a record from it.
-      // cout << "page " << curPageIndex + 1 << " was depleted." << endl;
-      ++curPageIndex;
-      // cout << "attempting to read page " << curPageIndex + 1  << " out of "
-      // << (f.GetLength() - 1) << "... ";
-      if(curPageIndex + 1 <= f.GetLength() - 1) // if there are still more pages to read.
-        {
-          // cout << "successful" << endl;
-          f.GetPage(&curPage, curPageIndex);
-          int ret = curPage.GetFirst(&fetchme);
-          assert(1 == ret); // we can't now have fewer pages than we did four lines ago.
-          return 1;
-        }
-      else // there are no more pages to read.
-        {
-          // cout << "failed, end of file" << endl;
-          return 0;
-        }
-    }
-  else
-    { // page is not empty, return the next record.
-      return 1;
-    }
-  return 0;
+  return dbf->GetNext(fetchme);
 }
 
 int DBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
   // nick says I might need a temp Record for this to test the comparison
   // it may or may not be a smart idea. ~quoth the Nick. NEVERMORE.
-  ComparisonEngine comp;
-
-  while(1 == GetNext(fetchme)) // there are more records
-    {
-      if (comp.Compare(&fetchme,&literal,&cnf)) // check the record
-        {
-          return 1;
-        }
-    }
-  return 0;
+  return dbf->GetNext(fetchme, cnf, literal);
 }

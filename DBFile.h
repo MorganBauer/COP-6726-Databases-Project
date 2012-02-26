@@ -20,10 +20,6 @@ class DBFile {
 
   GenericDBFile * dbf;
 
-  File f;
-  Page curPage;
-  off_t curPageIndex;
-
  public:
   DBFile ();
 

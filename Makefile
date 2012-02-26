@@ -11,14 +11,14 @@ again: clean all
 
 all: a1test a2-1test a22.out
 
-a22.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o
-	$(CC) -o a22.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o -lfl -lpthread
+a22.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o
+	$(CC) -o a22.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o -lfl -lpthread
 
 a2-2test.o: a2-2test.cc
 	$(CC)  -c a2-2test.cc
 
-a2-1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-1test.o
-	$(CC) -o a2-1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o Pipe.o y.tab.o lex.yy.o a2-1test.o -lfl -lpthread
+a2-1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o Pipe.o y.tab.o lex.yy.o a2-1test.o
+	$(CC) -o a2-1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o Pipe.o y.tab.o lex.yy.o a2-1test.o -lfl -lpthread
 
 a2-11test.o: a2-1test.cc
 	$(CC)  -c a2-1test.cc
@@ -47,19 +47,19 @@ Pipe.o: Pipe.cc Pipe.h
 BigQ.o: BigQ.cc BigQ.h
 	$(CC)  -c BigQ.cc
 
-BPlusDBFile.o: BPlusDBFile.cc BPlusDBFile.h
+BPlusDBFile.o: BPlusDBFile.cc BPlusDBFile.h DBFileDefs.h
 	$(CC)  -c BPlusDBFile.cc
 
-SortedDBFile.o: SortedDBFile.cc SortedDBFile.h
+SortedDBFile.o: SortedDBFile.cc SortedDBFile.h DBFileDefs.h
 	$(CC)  -c SortedDBFile.cc
 
-HeapDBFile.o: HeapDBFile.cc HeapDBFile.h
+HeapDBFile.o: HeapDBFile.cc HeapDBFile.h DBFileDefs.h
 	$(CC)  -c HeapDBFile.cc
 
-GenericDBFile.o: GenericDBFile.cc GenericDBFile.h
+GenericDBFile.o: GenericDBFile.cc GenericDBFile.h DBFileDefs.h
 	$(CC)  -c GenericDBFile.cc
 
-DBFile.o: DBFile.cc DBFile.h
+DBFile.o: DBFile.cc DBFile.h DBFileDefs.h
 	$(CC)  -c DBFile.cc
 
 File.o: File.cc File.h

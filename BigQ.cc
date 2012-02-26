@@ -175,7 +175,6 @@ void BigQ::PhaseTwoLinearScan(void)
         cout << "Run " << i;
         runs.push_back(Run(i,runLocations[i].first,runLocations[i].second, &partiallySortedFile));
         cout << " initialized" << endl;
-        runs[i].print();
       }
 
     for (int i = 0; i < runCount; i++)
