@@ -21,10 +21,14 @@ SortedDBFile::SortedDBFile ()
 
 int SortedDBFile::Open (char *f_path)
 {
+  // figure out how to get the order maker from the file.
+  f.Open(1, f_path);
+  return 0;
 }
 
 int SortedDBFile::Create (char *f_path, fType f_type, void *startup)
 {
+  SortInfo si = *((SortInfo *)startup);
 }
 
 void SortedDBFile::Load (Schema &f_schema, char *loadpath)
