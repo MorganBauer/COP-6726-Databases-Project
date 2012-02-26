@@ -15,7 +15,7 @@ using namespace std;
 char *catalog_path = "catalog";
 //char *tpch_dir ="/cise/tmp/dbi_sp11/DATA/1G/";
 char *tpch_dir ="/Users/morganbauer/Downloads/tpch_2_14_3/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
-char *dbfile_dir = "";
+char *dbfile_dir = "/tmp/mhb/";
 
 extern "C" {
   int yyparse(void);   // defined in y.tab.c
