@@ -1,3 +1,4 @@
+#include "HeapDBFile.h"
 #include "TwoWayList.h"
 #include "Record.h"
 #include "Schema.h"
@@ -5,7 +6,6 @@
 #include "Comparison.h"
 #include "ComparisonEngine.h"
 #include "DBFile.h"
-#include "HeapDBFile.h"
 #include "Defs.h"
 #include <iostream>
 #include <fstream>

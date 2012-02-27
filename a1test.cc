@@ -1,9 +1,9 @@
+#include "a1test.h"
 #include <iostream>
 #include <algorithm>
 #include <parallel/algorithm>
 #include <vector>
 #include "DBFile.h"
-#include "a1test.h"
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
