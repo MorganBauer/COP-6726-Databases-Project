@@ -16,11 +16,31 @@
 /* Morgan Bauer */
 
 
-SortedDBFile::SortedDBFile () : f(), curPage(), curPageIndex(0), runlength(0), so(), bq(NULL)
+SortedDBFile::SortedDBFile () : f(), curPage(), curPageIndex(0), runLength(0), so(), bq(NULL)
 {}
 
 int SortedDBFile::Open (char *f_path)
 {
+  int t;
+  { // whole purpose is to set up t, really.
+    string metafileName;
+    metafileName.append(f_path);
+    metafileName.append(".meta");
+    ifstream metafile;
+    metafile.open(metafileName.c_str());
+    if(!metafile) return 1;
+
+    metafile >> t;
+    if(!metafile) return 1;
+    
+    metafile >> runLength;
+    metafile >> so;
+    
+    
+    fType dbfileType = (fType) t;
+    metafile.close();
+    cout << "file type is " << dbfileType << endl;
+  }
 
   // figure out how to get the order maker from the file.
   f.Open(1, f_path);
