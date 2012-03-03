@@ -59,9 +59,6 @@ void Comparison :: Print () {
 		cout << "(String)";
 }
 
-
-
-
 OrderMaker :: OrderMaker() : numAtts(0)
 {}
 
@@ -97,6 +94,46 @@ OrderMaker :: OrderMaker(Schema *schema) : numAtts(0)
         }
 }
 
+std::ostream& operator<<(std::ostream& os, const OrderMaker& om)
+{
+  os << om.numAtts << endl;
+  // int n = schema->GetNumAtts();
+  // Attribute *atts = schema->GetAtts();
+
+	for (int i = 0; i < om.numAtts; i++) {
+          cout << "attr " << i << " "
+               << om.whichAtts[i] << " "
+               << om.whichTypes[i] << endl;
+
+          os << om.whichAtts[i] << ends;
+          os << om.whichTypes[i] << ends;
+                        // whichAtts[numAtts] = i;
+			// whichTypes[numAtts] = Int;
+			// numAtts++;
+        }
+        return os;
+}
+
+std::istream& operator>>(std::istream& is, OrderMaker& om)
+{
+  is >> om.numAtts;
+  // int n = schema->GetNumAtts();
+  // Attribute *atts = schema->GetAtts();
+
+	for (int i = 0; i < om.numAtts; i++) {
+          is >> om.whichAtts[i];
+          int t;
+          is >> t;
+          om.whichTypes[i] = (Type)t;
+                        // whichAtts[numAtts] = i;
+			// whichTypes[numAtts] = Int;
+			// numAtts++;
+          cout << "attr " << i << " "
+               << om.whichAtts[i] << " "
+               << om.whichTypes[i] << endl;
+        }
+        return is;
+}
 
 void OrderMaker :: Print () {
 	printf("NumAtts = %5d\n", numAtts);
