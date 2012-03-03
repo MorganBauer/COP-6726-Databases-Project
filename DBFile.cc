@@ -16,43 +16,47 @@
 DBFile::DBFile () : dbf(NULL)
 {}
 
-int DBFile::Open (char *f_path) {
+int DBFile::Open (char *f_path)
+{
   // TODO
   // read metadata file later
   // switch statement dispatch of appropriate underneath type
   //
-  {
+  int t;
+  { // whole purpose is to set up t, really.
     string metafileName;
     metafileName.append(f_path);
     metafileName.append(".meta");
     ifstream metafile;
     metafile.open(metafileName.c_str());
     if(!metafile) return 1;
-    int t;
+
     metafile >> t;
     if(!metafile) return 1;
     fType dbfileType = (fType) t;
     metafile.close();
     cout << "file type is " << dbfileType << endl;
-   
-    switch(t)
-      {
-      case heap:
-        dbf = new HeapDBFile();
-        break;
-      case sorted: // fall through, not implemented
-        cout << "open a sorted dbfile" << endl;
-        dbf = new SortedDBFile();
-        cout << "crash" << endl;
-        exit(-1);
-      case tree: // fall through, not implemented
-        cout << "open a b-plus tree dbfile" << endl;
-        exit(-1);
-      default:
-        cout << "I don't know what type of file that is. Doing Nothing." <<  endl;
-        exit(-1);
-      }
   }
+
+  switch(t)
+    {
+    case heap:
+      dbf = new HeapDBFile();
+      break;
+    case sorted: // fall through, not implemented
+      cout << "open a sorted dbfile" << endl;
+      dbf = new SortedDBFile();
+      // cout << "crash on purpose in dbfile open" << endl;
+      // exit(-1);
+      break;
+    case tree: // fall through, not implemented
+      cout << "open a b-plus tree dbfile" << endl;
+      exit(-1);
+    default:
+      cout << "I don't know what type of file that is. Doing Nothing." <<  endl;
+      exit(-1);
+    }
+
   return dbf->Open(f_path);
 }
 
@@ -64,10 +68,14 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
     ofstream metafile;
     metafile.open(metafileName.c_str());
     if(!metafile) return 1;
-    metafile << f_type;
+    metafile << f_type << endl; // write db type
     if(sorted == f_type)
       {
-        ((SortInfo *)startup)->myOrder->Print();
+        SortInfo si = *((SortInfo *)startup);
+        metafile << si.runLength << endl;
+        OrderMaker om = *(OrderMaker *)si.myOrder;
+        om.Print();
+        metafile << om; // write 
       }
     if(!metafile) return 1;
     metafile.close();
@@ -92,7 +100,7 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
       cout << "I don't know what type of file that is. Doing Nothing." <<  endl;
       exit(-1);
     }
-  return dbf->Create(f_path, f_type, startup);;
+  return dbf->Create(f_path, f_type, startup);
 }
 
 void DBFile::Load (Schema &f_schema, char *loadpath) {
