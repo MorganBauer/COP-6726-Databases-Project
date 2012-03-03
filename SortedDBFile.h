@@ -15,8 +15,9 @@ class SortedDBFile : public GenericDBFile
   Page curPage;
   off_t curPageIndex;
 
-  SortInfo si;
-  // BigQ bq;
+  int runlength;
+  OrderMaker so;
+  BigQ * bq;
 
  public:
   SortedDBFile ();

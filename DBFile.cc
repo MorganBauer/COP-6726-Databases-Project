@@ -42,7 +42,8 @@ int DBFile::Open (char *f_path) {
         break;
       case sorted: // fall through, not implemented
         cout << "open a sorted dbfile" << endl;
-        // dbf = new SortedDBFile();
+        dbf = new SortedDBFile();
+        cout << "crash" << endl;
         exit(-1);
       case tree: // fall through, not implemented
         cout << "open a b-plus tree dbfile" << endl;
@@ -82,8 +83,8 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
       break;
     case sorted: // fall through, not implemented
       cout << "create a sorted dbfile" << endl;
-      // dbf = new SortedDBFile();
-      exit(-1);
+      dbf = new SortedDBFile();
+      break;
     case tree: // fall through, not implemented
       cout << "create a b-plus tree dbfile" << endl;
       exit(-1);

@@ -16,11 +16,12 @@
 /* Morgan Bauer */
 
 
-SortedDBFile::SortedDBFile ()
+SortedDBFile::SortedDBFile () : f(), curPage(), curPageIndex(0), runlength(0), so(), bq(NULL)
 {}
 
 int SortedDBFile::Open (char *f_path)
 {
+
   // figure out how to get the order maker from the file.
   f.Open(1, f_path);
   return 0;
@@ -28,7 +29,10 @@ int SortedDBFile::Open (char *f_path)
 
 int SortedDBFile::Create (char *f_path, fType f_type, void *startup)
 {
-  SortInfo si = *((SortInfo *)startup);
+  assert(sorted == f_type);
+  // SortInfo si = *((SortInfo *)startup);
+  f.Open(0,f_path);
+  return 1;
 }
 
 void SortedDBFile::Load (Schema &f_schema, char *loadpath)
@@ -41,6 +45,16 @@ void SortedDBFile::MoveFirst ()
 
 int SortedDBFile::Close ()
 {
+  int fsize = f.Close();
+  if (fsize >= 0) // check that file size is positive. This is the only rational test I can come up with at this time.
+    {
+      return 1;
+    }
+  else
+    {
+      cout << "fsize was: " << fsize << endl;
+      return 0; //failure, negative file size, or some other error.
+    }
 }
 
 void SortedDBFile::Add (Record &rec)
