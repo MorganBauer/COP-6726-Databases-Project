@@ -11,7 +11,7 @@
 enum Target {Left, Right, Literal};
 enum CompOperator {LessThan, GreaterThan, Equals};
 enum Type {Int, Double, String};
-
+enum ReturnState {FAILURE = 0, SUCCESS = 1};
 
 unsigned int Random_Generate();
 
