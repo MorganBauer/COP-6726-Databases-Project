@@ -26,8 +26,8 @@ void * BigQ :: thread_starter(void *context)
 }
 
 void * BigQ :: WorkerThread(void) {
-  char * partiallySortedFileTempFileName = "/tmp/zzzpartiallysorted"; // maybe set this per instance to a random filename
-  partiallySortedFile.Open(0, partiallySortedFileTempFileName);
+  char partiallySortedFileTempFileName[] = "/tmp/partiallysortedXXXXXX"; // maybe set this per instance to a random filename
+  partiallySortedFile.TempOpen(partiallySortedFileTempFileName);
   // FIRST PHASE
   PhaseOne();
   // in pipe should be dead now.
