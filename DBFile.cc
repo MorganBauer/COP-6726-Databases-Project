@@ -74,8 +74,9 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
         SortInfo si = *((SortInfo *)startup);
         metafile << si.runLength << endl;
         OrderMaker om = *(OrderMaker *)si.myOrder;
-        om.Print();
         metafile << om; // write 
+
+        om.Print();
       }
     if(!metafile) return 1;
     metafile.close();
