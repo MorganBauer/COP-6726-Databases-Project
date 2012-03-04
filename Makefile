@@ -1,4 +1,4 @@
-CC = g++ -O0 -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp
+CC = ccache g++ -O0 -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp
 # -D_GLIBCXX_PARALLEL -march=native
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
 tag = -i
@@ -23,8 +23,8 @@ a2-1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile
 a2-11test.o: a2-1test.cc a2-1test.h
 	$(CC)  -c a2-1test.cc
 
-a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o y.tab.o lex.yy.o a1test.o
-	$(CC) -o a1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o y.tab.o lex.yy.o a1test.o -lfl -lpthread
+a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o BigQ.o Pipe.o SortedDBFile.o y.tab.o lex.yy.o a1test.o
+	$(CC) -o a1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o BigQ.o Pipe.o SortedDBFile.o y.tab.o lex.yy.o a1test.o -lfl -lpthread
 
 a1test.o: a1test.cc a1test.h
 	$(CC)  -c a1test.cc
