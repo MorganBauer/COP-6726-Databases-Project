@@ -1,6 +1,7 @@
 #include "a2-2test.h"
 #include "BigQ.h"
 #include <pthread.h>
+#include <cassert>
 void test1 ();
 void test2 ();
 void test3 ();
@@ -26,28 +27,38 @@ int add_data (FILE *src, int numrecs, int &res) {
 // create a dbfile interactively
 void test1 () {
 
-
-  OrderMaker o;
-  rel->get_sort_order (o);
+  OrderMaker om;
+  rel->get_sort_order (om);
 
   int runlen = 0;
   while (runlen < 1) {
     cout << "\t\n specify runlength:\n\t ";
     cin >> runlen;
   }
-  struct {OrderMaker *o; int l;} startup = {&o, runlen};
+  struct {OrderMaker *om; int l;} startup = {&om, runlen};
 
   DBFile dbfile;
   cout << "\n output to dbfile : " << rel->path () << endl;
-  dbfile.Create (rel->path(), sorted, &startup);
-  dbfile.Close ();
+  {
+    int rv = dbfile.Create (rel->path(), sorted, &startup);
+    cout << "rv = " << rv << endl;
+    assert(1 == rv);
+    rv = dbfile.Close ();
+    cout << "rv = " << rv << endl;
+    assert(1 == rv);
+  }
+
 
   char tbl_path[100];
   sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name());
   cout << " input from file : " << tbl_path << endl;
 
   FILE *tblfile = fopen (tbl_path, "r");
-
+  if (NULL == tblfile)
+    {
+      cout << "tblfile is null" << endl;
+      assert(NULL != tblfile);
+    }
   srand48 (time (NULL));
 
   int proc = 1, res = 1, tot = 0;
@@ -59,6 +70,7 @@ void test1 () {
       cout << " \t 2. add a lot (1k to 1e+06 recs) \n";
       cout << " \t 3. run some query \n \t ";
       cin >> x;
+      cout << x;
     }
     if (x < 3) {
       proc = add_data (tblfile,lrand48()%(int)pow(1e3,x)+(x-1)*1000, res);
