@@ -114,7 +114,9 @@ void DBFile::MoveFirst () {
 
 int DBFile::Close ()
 {
-  return dbf->Close();
+  int rv = dbf->Close();
+  delete dbf;
+  return rv;
 }
 
 void DBFile::Add (Record &rec) {
