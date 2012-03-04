@@ -262,6 +262,26 @@ void File :: Open (int fileLen, char *fName) {
 }
 
 
+void File :: TempOpen (char *fName) {
+
+	// figure out the flags for the system open call
+	// actually do the open
+        myFilDes = mkstemp (fName);
+
+#ifdef verbose
+	cout << "Opening file " << fName << " with "<< curLength << " pages.\n";
+#endif
+
+	// see if there was an error
+	if (myFilDes < 0) {
+		cerr << "BAD!  Open did not work for " << fName << "\n";
+		exit (1);
+	}
+
+        curLength = 0;
+}
+
+
 off_t File :: GetLength () {
 	return curLength;
 }

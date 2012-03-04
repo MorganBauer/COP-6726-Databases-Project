@@ -68,6 +68,8 @@ public:
 	// simply opened
 	void Open (int length, char *fName);
 
+	void TempOpen (char *fName);
+
 	// allows someone to explicitly get a specified page from the file
 	void GetPage (Page *putItHere, off_t whichPage);
 
