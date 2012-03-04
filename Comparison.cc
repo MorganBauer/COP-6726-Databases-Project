@@ -97,19 +97,15 @@ OrderMaker :: OrderMaker(Schema *schema) : numAtts(0)
 std::ostream& operator<<(std::ostream& os, const OrderMaker& om)
 {
   os << om.numAtts << endl;
-  // int n = schema->GetNumAtts();
-  // Attribute *atts = schema->GetAtts();
+  cout << "number of attirbutes is " << om.numAtts << endl;
 
 	for (int i = 0; i < om.numAtts; i++) {
           cout << "attr " << i << " "
                << om.whichAtts[i] << " "
                << om.whichTypes[i] << endl;
 
-          os << om.whichAtts[i] << ends;
-          os << om.whichTypes[i] << ends;
-                        // whichAtts[numAtts] = i;
-			// whichTypes[numAtts] = Int;
-			// numAtts++;
+          os << om.whichAtts[i] << " ";
+          os << om.whichTypes[i] << endl;
         }
         return os;
 }
@@ -117,8 +113,7 @@ std::ostream& operator<<(std::ostream& os, const OrderMaker& om)
 std::istream& operator>>(std::istream& is, OrderMaker& om)
 {
   is >> om.numAtts;
-  // int n = schema->GetNumAtts();
-  // Attribute *atts = schema->GetAtts();
+  cout << "number of attirbutes is " << om.numAtts << endl;
 
 	for (int i = 0; i < om.numAtts; i++) {
           is >> om.whichAtts[i];
