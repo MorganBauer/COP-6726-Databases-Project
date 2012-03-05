@@ -5,6 +5,7 @@
 void test1 ();
 void test2 ();
 void test3 ();
+void test4 ();
 
 int add_data (FILE *src, int numrecs, int &res) {
   DBFile dbfile;
@@ -13,7 +14,7 @@ int add_data (FILE *src, int numrecs, int &res) {
 
   int proc = 0;
   int xx = 20000;
-  while ((res = temp.SuckNextRecord (rel->schema (), src)) && ++proc < numrecs) {
+  while (++proc < numrecs && (res = temp.SuckNextRecord (rel->schema (), src))) {
     dbfile.Add (temp);
     if (proc == xx) cerr << "\t ";
     if (proc % xx == 0) cerr << ".";
@@ -113,6 +114,8 @@ void test3 () {
   CNF cnf;
   Record literal;
   rel->get_cnf (cnf, literal);
+  cnf.Print();
+  literal.Print (rel->schema());
 
   DBFile dbfile;
   dbfile.Open (rel->path());
@@ -130,7 +133,65 @@ void test3 () {
   }
   cout << "\n query over " << rel->path () << " returned " << cnt << " recs\n";
   dbfile.Close ();
+}
 
+void test4 ()
+{
+  OrderMaker om;
+  rel->get_sort_order (om);
+
+  int runlen = 0;
+  while (runlen < 1) {
+    cout << "\t\n specify runlength:\n\t ";
+    cin >> runlen;
+  }
+  struct {OrderMaker *om; int l;} startup = {&om, runlen};
+
+  DBFile dbfile;
+  cout << "\n output to dbfile : " << rel->path () << endl;
+  {
+    int rv = dbfile.Create (rel->path(), sorted, &startup); // create
+    cout << "rv = " << rv << endl;
+    assert(SUCCESS == rv);
+    rv = dbfile.Close (); // close
+    cout << "rv = " << rv << endl;
+    assert(1 == rv);
+  }
+
+  char tbl_path[100];
+  sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name());
+  cout << " input from file : " << tbl_path << endl;
+
+  FILE *tblfile = fopen (tbl_path, "r");
+  if (NULL == tblfile)
+    {
+      cout << "tblfile is null" << endl;
+      assert(NULL != tblfile);
+    }
+
+  dbfile.Open (rel->path ());
+  Record temp;
+  dbfile.Close();
+  int processed = 0;
+  for(int i = 0; i < 4; ++i)
+    {
+      cout << "\t\tadding 10k records" << endl;
+      dbfile.Open (rel->path ());
+      while ( ++processed <= 10000 && (temp.SuckNextRecord (rel->schema (), tblfile)))
+        {
+          dbfile.Add (temp);
+        }
+      dbfile.Close();
+      processed = 0;
+    }
+  cout << "\t\tadding the rest" << endl;
+  dbfile.Open (rel->path ());
+  while ((temp.SuckNextRecord (rel->schema (), tblfile)))
+    {
+      dbfile.Add (temp);
+    }
+  dbfile.Close();
+  cout << "done" << endl;
 }
 
 int main (int argc, char *argv[]) {
@@ -138,15 +199,16 @@ int main (int argc, char *argv[]) {
   setup ();
 
   relation *rel_ptr[] = {n, r, c, p, ps, s, o, li};
-  void (*test_ptr[]) () = {&test1, &test2, &test3};
+  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4};
   void (*test) ();
 
   int tindx = 0;
-  while (tindx < 1 || tindx > 3) {
+  while (tindx < 1 || tindx > 4) {
     cout << " select test option: \n";
     cout << " \t 1. create sorted dbfile\n";
     cout << " \t 2. scan a dbfile\n";
-    cout << " \t 3. run some query \n \t ";
+    cout << " \t 3. run some query \n";
+    cout << " \t 4. add/merge test \n \t ";
     cin >> tindx;
   }
 
