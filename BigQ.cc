@@ -127,9 +127,12 @@ void BigQ :: sortRuns(vector<Record> & runlenrecords)
 {
   // sort the records we have in the runlen buffer.
   // cout << "sorting run " << endl;
-  std::sort(runlenrecords.begin(),
-            runlenrecords.end(),
-            Compare(sortorder));
+  if (!std::is_sorted(runlenrecords.begin(),
+                      runlenrecords.end(),
+                      Compare(sortorder)))
+    std::sort(runlenrecords.begin(),
+              runlenrecords.end(),
+              Compare(sortorder));
   // cout << "run size " << runlenrecords.size() << endl;
 }
 

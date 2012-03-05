@@ -1,4 +1,4 @@
-CC = ccache g++ -O0 -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp
+CC = ccache g++ -O0 -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp -std=gnu++0x
 # -D_GLIBCXX_PARALLEL -march=native
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
 tag = -i
