@@ -80,6 +80,7 @@ class CNF {
 
 public:
 
+        int GetSearchOrder(OrderMaker &);
 	// this returns an instance of the OrderMaker class that
 	// allows the CNF to be implemented using a sort-based
 	// algorithm such as a sort-merge join.  Returns a 0 if and

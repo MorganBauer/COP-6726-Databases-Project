@@ -144,6 +144,10 @@ void OrderMaker :: Print () {
 	}
 }
 
+int CNF :: GetSearchOrder(OrderMaker & om)
+{
+  return SUCCESS;
+}
 
 int CNF :: GetSortOrders (OrderMaker &left, OrderMaker &right) {
 
@@ -632,7 +636,7 @@ void CNF :: GrowFromParseTree (struct AndList *parseTree, Schema *mySchema,
 
 	// and get the record
 	literal.SuckNextRecord (&outSchema, outRecFile);
-
+        literal.Print(&outSchema);
 	// close the record file
 	fclose (outRecFile);
 
