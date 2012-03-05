@@ -85,7 +85,7 @@ class Run
     else
       { // page was empty, get new page
         cur_offset++;
-        cout << cur_offset << " ";
+        // cout << cur_offset << " ";
         // check if out of bounds
         if (cur_offset < end_offset)
           {

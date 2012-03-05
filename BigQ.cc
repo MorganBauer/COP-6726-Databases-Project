@@ -26,12 +26,13 @@ void * BigQ :: thread_starter(void *context)
 }
 
 void * BigQ :: WorkerThread(void) {
+  // cout << endl << "BIGQ STARTED" << endl;
   char partiallySortedFileTempFileName[] = "/tmp/partiallysortedXXXXXX"; // maybe set this per instance to a random filename
   partiallySortedFile.TempOpen(partiallySortedFileTempFileName);
   // FIRST PHASE
   PhaseOne();
   // in pipe should be dead now.
-  cout << totalRecords << " Records written to file" << endl;
+  // cout << totalRecords << " Records written to file" << endl;
   // SECOND PHASE
   static const int runThreshold = 200;
   if (runThreshold >= runCount)
@@ -43,13 +44,14 @@ void * BigQ :: WorkerThread(void) {
       PhaseTwoPriorityQueue();
     }
 
-  cout << "cleanup" << endl;
+  // cout << "cleanup" << endl;
   partiallySortedFile.Close();
   // Cleanup
   remove(partiallySortedFileTempFileName);
   // finally shut down the out pipe
   // this lets the consumer thread know that there will not be anything else put into the pipe
   out.ShutDown ();
+  // cout << endl << "BIGQ FINISHED" << endl;
   pthread_exit(NULL); // make our worker thread go away
 }
 
@@ -89,13 +91,13 @@ void BigQ::PhaseOne(void)
 
           if ( pageReadCounter == runlen ) // if it's larger than runlen, we need to stop.
             {
-              cout << "finished getting a run, now to sort it" << endl;
+              // cout << "finished getting a run, now to sort it" << endl;
               runCount++;
               // update probable max vector size to avoid copying in future iterations.
               if (vecsize < runlenrecords.size()) {vecsize = runlenrecords.size();}
 
               sortRuns(runlenrecords);
-              cout << "run size " << runlenrecords.size() << endl;
+              // cout << "run size " << runlenrecords.size() << endl;
               // cout << "run sorted " << endl;
               writeSortedRunToFile(runlenrecords);
 
@@ -113,12 +115,12 @@ void BigQ::PhaseOne(void)
       if (vecsize < runlenrecords.size()) {vecsize = runlenrecords.size();}
       runCount++;
       sortRuns(runlenrecords);
-      cout << "last run sorted " << endl;
+      // cout << "last run sorted " << endl;
       writeSortedRunToFile(runlenrecords);
     }
 
   runlenrecords.clear();
-  cout << "maximum vector size needed was " << vecsize << endl;
+  // cout << "maximum vector size needed was " << vecsize << endl;
 }
 
 void BigQ :: sortRuns(vector<Record> & runlenrecords)
@@ -128,7 +130,7 @@ void BigQ :: sortRuns(vector<Record> & runlenrecords)
   std::sort(runlenrecords.begin(),
             runlenrecords.end(),
             Compare(sortorder));
-  cout << "run size " << runlenrecords.size() << endl;
+  // cout << "run size " << runlenrecords.size() << endl;
 }
 
 int BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
@@ -152,7 +154,7 @@ int BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
   partiallySortedFile.AddPage(&tp,pagesInserted++);
 
   off_t pageEnd = pagesInserted;
-  cout << "inserted " <<  pageEnd - pageStart << " pages" << endl;
+  // cout << "inserted " <<  pageEnd - pageStart << " pages" << endl;
   runLocations.push_back(make_pair(pageStart,pageEnd));
   return (int)(pageEnd-pageStart);
 }
@@ -160,44 +162,44 @@ int BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
 void BigQ::PhaseTwoLinearScan(void)
 {
   cout << endl << endl << "Linear Scan Merge of sorted runs" << endl;
-  cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
+  // cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
   for (std::vector < std::pair <off_t,off_t> >::iterator it = runLocations.begin(); it < runLocations.end(); it++)
     {
-      cout << "from " << (*it).first << " to " << (*it).second << endl;
+      // cout << "from " << (*it).first << " to " << (*it).second << endl;
     }
 
   {
     vector<Run> runs;
     runs.reserve(runCount);
-    cout << "initializing runs" << endl;
+    // cout << "initializing runs" << endl;
     for (int i = 0; i < runCount; i++)
       {
-        cout << "Run " << i;
+        // cout << "Run " << i;
         runs.push_back(Run(i,runLocations[i].first,runLocations[i].second, &partiallySortedFile));
-        cout << " initialized" << endl;
+        // cout << " initialized" << endl;
       }
 
     for (int i = 0; i < runCount; i++)
       {
-        runs[i].print();
+        // runs[i].print();
       }
 
     vector<Record> minimums;
     // initialize minimums
     // for each run, get the first guy.
-    cout << "initializing minimums" << endl;
+    // cout << "initializing minimums" << endl;
     minimums.reserve(runCount);
     for (int i = 0; i < runCount; i++)
       {
-        cout << "minimum " << i;
+        // cout << "minimum " << i;
         Record tr;
         runs[i].getNextRecord(tr);
         minimums.push_back(tr);
-        cout << "initialized " << endl;
+        // cout << "initialized " << endl;
       }
     // now find the minimum guy and put it in the pipe
     // do this totalRecords times
-    cout << "putting stuff in the pipe" << endl;
+    // cout << "putting stuff in the pipe" << endl;
     // Compare c = Compare(sortorder);
     {
       int runsLeft = runCount;
@@ -218,7 +220,7 @@ void BigQ::PhaseTwoLinearScan(void)
             }
           else
             {
-              cout << "run empty, got to get rid of it" << endl;
+              // cout << "run empty, got to get rid of it" << endl;
               runsLeft--;
               minimums.erase(minimums.begin() + run);
               runs.erase(runs.begin() + run);
@@ -226,60 +228,60 @@ void BigQ::PhaseTwoLinearScan(void)
             }
         }
       assert(recordsOut == totalRecords);
-      cout << minimums.size() << runs.size() << endl;
-      cout << "runs left = "<< runsLeft << endl;
+      // cout << minimums.size() << runs.size() << endl;
+      // cout << "runs left = "<< runsLeft << endl;
       assert (0 == runsLeft);
     }
   }
-  cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
-  cout << "runlen of " << runlen << endl;
-  cout << "phase two complete" << endl;
+  // cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
+  // cout << "runlen of " << runlen << endl;
+  // cout << "phase two complete" << endl;
 }
 
 void BigQ::PhaseTwoPriorityQueue(void)
 {
   cout << endl << endl << "Priority Queue Merge of sorted runs" << endl;
-  cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
+  // cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
   for (std::vector < std::pair <off_t,off_t> >::iterator it = runLocations.begin(); it < runLocations.end(); it++)
     {
-      cout << "from " << (*it).first << " to " << (*it).second << endl;
+      // cout << "from " << (*it).first << " to " << (*it).second << endl;
     }
 
   {
     vector<Run> runs;
     runs.reserve(runCount);
-    cout << "initializing runs" << endl;
+    // cout << "initializing runs" << endl;
     for (int i = 0; i < runCount; i++)
       {
-        cout << "Run " << i;
+        // cout << "Run " << i;
         runs.push_back(Run(i,runLocations[i].first,runLocations[i].second, &partiallySortedFile));
-        cout << " initialized" << endl;
+        // cout << " initialized" << endl;
       }
 
     for (int i = 0; i < runCount; i++)
       {
-        runs[i].print();
+        // runs[i].print();
       }
 
     std::priority_queue<TaggedRecord, vector<TaggedRecord>, TaggedRecordCompare> mins (sortorder);
 
     // initialize minimums
     // for each run, get the first guy.
-    cout << "initializing minimums" << endl;
+    // cout << "initializing minimums" << endl;
     // minimums.reserve(runCount);
     for (int i = 0; i < runCount; i++)
       {
-        cout << "minimum " << i;
+        // cout << "minimum " << i;
         Record tr;
         runs[i].getNextRecord(tr);
         // minimums.push_back(tr);
-        cout << "push" << endl;
+        // cout << "push" << endl;
         mins.push(TaggedRecord(tr,i));
-        cout << "initialized " << endl;
+        // cout << "initialized " << endl;
       }
     // now find the minimum guy and put it in the pipe
     // do this totalRecords times
-    cout << "putting stuff in the pipe" << endl;
+    // cout << "putting stuff in the pipe" << endl;
     // Compare c = Compare(sortorder);
     {
       int runsLeft = runCount;
@@ -301,18 +303,18 @@ void BigQ::PhaseTwoPriorityQueue(void)
             }
           else
             {
-              cout << "run empty, got to get rid of it" << endl;
+              // cout << "run empty, got to get rid of it" << endl;
               runsLeft--;
             }
         }
       assert(recordsOut == totalRecords);
-      cout << "runs left = "<< runsLeft << endl;
+      // cout << "runs left = "<< runsLeft << endl;
       assert (0 == runsLeft);
     }
   }
-  cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
-  cout << "runlen of " << runlen << endl;
-  cout << "phase two complete" << endl;
+  // cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
+  // cout << "runlen of " << runlen << endl;
+  // cout << "phase two complete" << endl;
 }
 
 BigQ::~BigQ () {
