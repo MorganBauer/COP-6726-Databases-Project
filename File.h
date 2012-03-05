@@ -66,9 +66,9 @@ public:
 	// the file; if notNew is zero, then the file is created and any other
 	// file located at that location is erased.  Otherwise, the file is
 	// simply opened
-	void Open (int length, char *fName);
+	void Open (int length, const char *fName);
 
-	void TempOpen (char *fName);
+	void TempOpen (const char *fName);
 
 	// allows someone to explicitly get a specified page from the file
 	void GetPage (Page *putItHere, off_t whichPage);
