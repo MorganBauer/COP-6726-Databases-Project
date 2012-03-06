@@ -195,16 +195,53 @@ void test4 ()
   cout << "done" << endl;
 }
 
+void test5 ()
+{
+  OrderMaker o;
+  rel->get_sort_order (o);
+
+  int runlen = 1;
+  while (runlen < 1) {
+    cout << "\t\n specify runlength:\n\t ";
+    cin >> runlen;
+  }
+  struct {OrderMaker *o; int l;} startup = {&o, runlen};
+
+
+  DBFile dbfile;
+  cout << "\n output to dbfile : " << rel->path () << endl;
+  dbfile.Create (rel->path(), sorted, &startup);
+
+
+  char tbl_path[100];
+  sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name());
+  cout << " input from file : " << tbl_path << endl;
+
+  int success = dbfile.Open(rel->path());
+  dbfile.Load(*(rel->schema()), tbl_path);
+
+  Record rec;
+
+  int recordsRead = 0;
+  while (dbfile.GetNext(rec)){
+    // rec.Print(rel->schema());
+    recordsRead++;
+  }
+  cout << recordsRead << " records read" << endl;
+
+  dbfile.Close ();
+}
+
 int main (int argc, char *argv[]) {
 
   setup ();
 
   relation *rel_ptr[] = {n, r, c, p, ps, s, o, li};
-  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4};
+  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &test5};
   void (*test) ();
 
   int tindx = 0;
-  while (tindx < 1 || tindx > 4) {
+  while (tindx < 1 || tindx > 5) {
     cout << " select test option: \n";
     cout << " \t 1. create sorted dbfile\n";
     cout << " \t 2. scan a dbfile\n";
