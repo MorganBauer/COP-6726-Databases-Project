@@ -14,10 +14,11 @@ int add_data (FILE *src, int numrecs, int &res) {
 
   int proc = 0;
   int xx = 20000;
-  while (++proc < numrecs && (res = temp.SuckNextRecord (rel->schema (), src))) {
+  while (proc < numrecs && (res = temp.SuckNextRecord (rel->schema (), src))) {
     dbfile.Add (temp);
     if (proc == xx) cerr << "\t ";
     if (proc % xx == 0) cerr << ".";
+    ++proc;
   }
 
   dbfile.Close ();
@@ -115,7 +116,7 @@ void test3 () {
   Record literal;
   rel->get_cnf (cnf, literal);
   cnf.Print();
-  literal.Print (rel->schema());
+  // literal.Print (rel->schema());
 
   DBFile dbfile;
   dbfile.Open (rel->path());
