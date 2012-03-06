@@ -146,6 +146,9 @@ void OrderMaker :: Print () {
 
 int CNF :: GetSearchOrder(OrderMaker & om)
 {
+  for (int i = 0; i < numAnds ; i++)
+    {
+    }
   return SUCCESS;
 }
 
