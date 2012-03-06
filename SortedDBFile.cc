@@ -60,6 +60,7 @@ int SortedDBFile::Create (char *f_path, fType f_type, void *startup)
 
 void SortedDBFile::Load (Schema &f_schema, char *loadpath)
 {
+  
 }
 
 void SortedDBFile::MoveFirst ()
@@ -239,31 +240,20 @@ int SortedDBFile::GetNext (Record &fetchme)
 
 int SortedDBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal)
 {
-  exit(-1);
   if (writing == currentRWMode)
     {
       MergeDifferential ();
     }
+  ComparisonEngine comp;
 
-  // Compare sortorder ordermaker attributes, to cnf attributes
-  // create new ordermaker based on this
-  //
-  // OrderMakers have this
-  //   int numAtts;
-  //   int whichAtts[MAX_ANDS];
-  //   Type whichTypes[MAX_ANDS];
-  //
-  // CNFs have this
-  //   Comparison orList[MAX_ANDS][MAX_ORS];
-  //   int orLens[MAX_ANDS];
-  //   int numAnds;
-
-
-
-  // check if cached order maker is usable
-  //    create new ordermaker if not
-  OrderMaker query;
-  // three conditions check (or maybe up above.
+  while(1 == GetNext(fetchme)) // there are more records
+    {
+      if (comp.Compare(&fetchme,&literal,&cnf)) // check the record
+        {
+          return 1;
+        }
+    }
+  return 0;
 }
 
 void SortedDBFile :: MergeDifferential (void)
