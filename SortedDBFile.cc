@@ -60,6 +60,29 @@ int SortedDBFile::Create (char *f_path, fType f_type, void *startup)
 
 void SortedDBFile::Load (Schema &f_schema, char *loadpath)
 {
+  currentRWMode = writing;
+  if (NULL == bq) // initialize pipes, and BigQ
+    {
+      toBigQ = new Pipe(pipeBufferSize);
+      fromBigQ = new Pipe(pipeBufferSize);
+      bq = new BigQ(*toBigQ,*fromBigQ,so, runLength );
+    }
+  FILE *tableFile = fopen (loadpath, "r");
+  if (0 == tableFile)
+    exit(-1);
+  Record tempRecord;
+  int recordCounter = 0; // counter for debug
+
+  while (1 == tempRecord.SuckNextRecord (&f_schema, tableFile))
+    { // there is another record available
+      assert(recordCounter >= 0);
+      recordCounter++;
+      if (recordCounter % 10000 == 0) {
+        cerr << recordCounter << "\n";
+      }
+      // use tempRecord, and put into tempPage. Later if page is full, write to file,
+      toBigQ->Insert(&tempRecord);
+    }
 }
 
 void SortedDBFile::MoveFirst ()
