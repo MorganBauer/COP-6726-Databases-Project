@@ -60,8 +60,6 @@ int SortedDBFile::Create (char *f_path, fType f_type, void *startup)
 
 void SortedDBFile::Load (Schema &f_schema, char *loadpath)
 {
-<<<<<<< HEAD
-=======
   currentRWMode = writing;
   if (NULL == bq) // initialize pipes, and BigQ
     {
@@ -85,7 +83,6 @@ void SortedDBFile::Load (Schema &f_schema, char *loadpath)
       // use tempRecord, and put into tempPage. Later if page is full, write to file,
       toBigQ->Insert(&tempRecord);
     }
->>>>>>> p2-2
 }
 
 void SortedDBFile::MoveFirst ()
