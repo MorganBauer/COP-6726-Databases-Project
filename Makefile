@@ -1,5 +1,6 @@
-CC = ccache g++ -O0 -Wno-deprecated -Wall -Wextra -Wshadow -Wno-write-strings -Weffc++ -pedantic-errors -ggdb3 -fopenmp -std=gnu++0x
-# -D_GLIBCXX_PARALLEL -march=native
+CC = g++ -O0 -ggdb3 -std=gnu++0x -fopenmp -Wall -Wextra -Wshadow -Wno-write-strings -Wno-deprecated -Weffc++ -pedantic-errors
+#
+# ccache -D_GLIBCXX_PARALLEL -march=native
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
 tag = -i
 
@@ -9,7 +10,13 @@ endif
 
 again: clean all
 
-all: a1test a2-1test a22.out
+all: a1test a2-1test a22.out test.out
+
+test.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o RelOp.o Function.o y.tab.o yyfunc.tab.o lex.yy.o lex.yyfunc.o test.o
+	$(CC) -o test.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o RelOp.o Function.o y.tab.o yyfunc.tab.o lex.yy.o lex.yyfunc.o test.o -lfl -lpthread
+
+test.o: test.cc
+	$(CC) -g -c test.cc
 
 a22.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o
 	$(CC) -o a22.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o -lfl -lpthread
@@ -47,6 +54,12 @@ Pipe.o: Pipe.cc Pipe.h
 BigQ.o: BigQ.cc BigQ.h
 	$(CC)  -c BigQ.cc
 
+RelOp.o: RelOp.cc RelOp.h
+	$(CC) -c RelOp.cc
+
+Function.o: Function.cc Function.h
+	$(CC) -c Function.cc
+
 BPlusDBFile.o: BPlusDBFile.cc BPlusDBFile.h DBFileDefs.h
 	$(CC)  -c BPlusDBFile.cc
 
@@ -76,12 +89,22 @@ TwoWayList.o : TwoWayList.cc TwoWayList.h
 
 y.tab.o: Parser.y
 	yacc -d Parser.y
-	sed $(tag) y.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/" 
+	#sed $(tag) y.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/" 
 	g++ -c y.tab.c
+
+yyfunc.tab.o: ParserFunc.y
+	yacc -p "yyfunc" -b "yyfunc" -d ParserFunc.y
+	#sed $(tag) yyfunc.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/" 
+	g++ -c yyfunc.tab.c
+
 
 lex.yy.o: Lexer.l
 	lex  Lexer.l
 	gcc  -c lex.yy.c
+
+lex.yyfunc.o: LexerFunc.l
+	lex -Pyyfunc LexerFunc.l
+	gcc  -c lex.yyfunc.c
 
 clean: 
 	rm -f a1test
@@ -89,6 +112,7 @@ clean:
 	rm -f a2-2test
 	rm -f *.o
 	rm -f *.out
-	rm -f y.tab.c
-	rm -f lex.yy.c
-	rm -f y.tab.h
+	rm -f y.tab.*
+	rm -f yyfunc.tab.*
+	rm -f lex.yy.*
+	rm -f lex.yyfunc*
