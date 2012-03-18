@@ -1,0 +1,53 @@
+
+* generic c++ tips
+
+** STL usage
+if you intend to use STL directly, and with the objects being copied in, make sure to have a copy constructor and an assignment operator defined, because some of the objects have pointer members.
+
+otherwise, you can use pointers and you don't need to.
+
+* project idiosyncrasies
+** uninitialized writes to buffers
+valgrind complains about these, but if you initialized the buffers it
+kills performance. the program is written to take care of this problem
+so that it doesn't effect the output. It does however make it
+impossible to hash the files and know you have the same output.
+
+** schema class problems
+
+memory leak from using strdup
+
+also not freeing other pointers
+
+** relation class problems
+the relation data structure in the test header files, needs to call delete on
+the schema pointer it contains
+
+* p1
+
+* p2-1
+
+generically, make sure the comparison function works.
+
+** sorting
+know that runs in is not necessarily equal to the runs out, so record where your runs start and stop.
+
+* p2-2
+** reading and writing ordermaker
+highly suggest overloading the stream insert and stream extract
+operators of c++
+** TODO implement merging differential file
+* p3
+don't use Function.tar, broken
+
+select pipe looks okay
+select file, just uses select pipe, looks fine
+project looks evil, cause we have to deconstruct and reconstruct
+records.
+join looks like a pain in the ass, but not evil
+duplicate remove requires another ordermaker, uggh
+sum looks okay, maybe
+group by looks annoying.
+write out doesn't look too bad.
+
+
