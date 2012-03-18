@@ -262,13 +262,13 @@ void File :: Open (int fileLen, const char *fName) {
 }
 
 
-void File :: TempOpen (const char *fName) {
+void File :: TempOpen (char *fName) {
 
 	// figure out the flags for the system open call
 	// actually do the open
-        char * fnm = strdup(fName);
-        myFilDes = mkstemp (fnm);
-        free(fnm);
+        // char * fnm = strdup(fName);
+        myFilDes = mkstemp (fName);
+        // free(fnm);
 #ifdef verbose
 	cout << "Opening file " << fName << " with "<< curLength << " pages.\n";
 #endif
