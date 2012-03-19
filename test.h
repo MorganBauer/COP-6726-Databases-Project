@@ -14,7 +14,7 @@ using namespace std;
 
 // test settings file should have the 
 // catalog_path, dbfile_dir and tpch_dir information in separate lines
-const char *settings = "test.cat";
+static const char * const settings = "test.cat";
 
 // donot change this information here
 char *catalog_path, *dbfile_dir, *tpch_dir = NULL;
@@ -51,6 +51,7 @@ public:
 		rname (_name), rschema (_schema), prefix (_prefix) {
 		sprintf (rpath, "%s%s.bin", prefix, rname);
 	}
+                ~relation() {delete rschema;}
 	char* name () { return rname; }
 	char* path () { return rpath; }
 	Schema* schema () { return rschema;}
