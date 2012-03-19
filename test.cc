@@ -2,6 +2,7 @@
 #include "BigQ.h"
 #include "RelOp.h"
 #include <pthread.h>
+#include <omp.h>
 
 Attribute IA = {"int", Int};
 Attribute SA = {"string", String};
@@ -54,6 +55,10 @@ int cAtts = 8;
 int nAtts = 4;
 int rAtts = 3;
 
+// initializers
+// open the database
+// parse the cnf from the string
+// set the internal runlength/number of pages to use variable
 void init_SF_ps (char *pred_str, int numpgs) {
 	dbf_ps.Open (ps->path());
 	get_cnf (pred_str, ps->schema (), cnf_ps, lit_ps);
@@ -92,6 +97,7 @@ void init_SF_c (char *pred_str, int numpgs) {
 
 // select * from partsupp where ps_supplycost <1.03 
 // expected output: 31 records
+// 21 records?
 void q1 () {
 
 	char *pred_ps = "(ps_supplycost < 1.03)";
@@ -371,8 +377,19 @@ int main (int argc, char *argv[]) {
 	if (qindx > 0 && qindx < 9) {
 		setup ();
 		query = query_ptr [qindx - 1];
-		query ();
-		cleanup ();
+                
+                double start = 0;
+                double end = 0;
+                start = omp_get_wtime();
+
+                query ();
+                
+                end = omp_get_wtime();
+                double elapsed = end - start;
+                cout << "elapsed query time is " << elapsed << "seconds" << endl ;
+
+		
+                cleanup ();
 		cout << "\n\n";
 	}
 	else {

@@ -19,9 +19,16 @@ class RelationalOp {
 class SelectFile : public RelationalOp { 
 
 	private:
-	// pthread_t thread;
-	// Record *buffer;
+  pthread_t selectFileThread;
+  DBFile * inF;
+  Pipe * outP;
+  CNF * cnf;
+  Record * lit;
+  
+  int runLength;
 
+  static void *thread_starter(void *context);
+  void * WorkerThread(void);
 	public:
 
 	void Run (DBFile &inFile, Pipe &outPipe, CNF &selOp, Record &literal);
