@@ -145,21 +145,24 @@ void q2 () {
 // select sum (s_acctbal + (s_acctbal * 1.05)) from supplier;
 // expected output: 9.24623e+07
 void q3 () {
-
+  clog << "enter q3" << endl;
 	char *pred_s = "(s_suppkey = s_suppkey)";
 	init_SF_s (pred_s, 100);
 
 	Sum T;
 		// _s (input pipe)
-		Pipe _out (1);
+                Pipe _out (1); // only need one record for final output.
 		Function func;
 			char *str_sum = "(s_acctbal + (s_acctbal * 1.05))";
 			get_cnf (str_sum, s->schema (), func);
 			func.Print ();
+                        clog << "printed function" << endl;
 	T.Use_n_Pages (1);
 	SF_s.Run (dbf_s, _s, cnf_s, lit_s);
+        clog << "return from starting SF worker" << endl;
 	T.Run (_s, _out, func);
-
+        clog << "return from starting sum worker" << endl;
+        
 	SF_s.WaitUntilDone ();
 	T.WaitUntilDone ();
 
@@ -171,7 +174,7 @@ void q3 () {
 	dbf_s.Close ();
 }
 
-
+// selectfile & join
 // select sum (ps_supplycost) from supplier, partsupp 
 // where s_suppkey = ps_suppkey;
 // expected output: 4.00406e+08
@@ -366,8 +369,16 @@ possible plan:
 int main (int argc, char *argv[]) {
 
 	if (argc != 2) {
-		cerr << " Usage: ./test.out [1-8] \n";
-		exit (0);
+		cerr << " Usage: ./test.out [1-8] \n"
+                     << "1. SelectFile" << endl
+                     << "2. SelectFile & Project" << endl
+                     << "3. SelectFile & Sum" << endl
+                     << "4. SelectFile & Join" << endl
+                     << "5. SelectFile & Project & DuplicateRemoval & WriteOut" << endl
+                     << "6. SelectFile & Join & GroupBy" << endl
+                     << "7. " << endl
+                     << "8. " << endl;
+		exit (-1);
 	}
 
 	void (*query_ptr[]) () = {&q1, &q2, &q3, &q4, &q5, &q6, &q7, &q8};  
