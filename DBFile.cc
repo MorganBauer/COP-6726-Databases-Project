@@ -41,6 +41,7 @@ int DBFile::Open (char *f_path)
   switch(t)
     {
     case heap:
+      cout << "open a heaped dbfile" << endl;
       dbf = new HeapDBFile();
       break;
     case sorted: // fall through, not implemented
