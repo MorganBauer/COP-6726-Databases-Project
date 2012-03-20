@@ -262,12 +262,10 @@ int SortedDBFile::GetNext (Record &fetchme)
 
 int SortedDBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal)
 {
-  exit(-1);
   if (writing == currentRWMode)
     {
       MergeDifferential ();
     }
-
   // Compare sortorder ordermaker attributes, to cnf attributes
   // create new ordermaker based on this
   //
@@ -281,12 +279,21 @@ int SortedDBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal)
   //   int orLens[MAX_ANDS];
   //   int numAnds;
 
-
-
   // check if cached order maker is usable
   //    create new ordermaker if not
   OrderMaker query;
-  // three conditions check (or maybe up above.
+  // three conditions check (or maybe up above).
+
+  ComparisonEngine comp;
+
+  while(1 == GetNext(fetchme)) // there are more records
+    {
+      if (comp.Compare(&fetchme,&literal,&cnf)) // check the record
+        {
+          return 1;
+        }
+    }
+  return 0;
 }
 
 void SortedDBFile :: MergeDifferential (void)
