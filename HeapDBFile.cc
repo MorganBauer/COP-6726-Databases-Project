@@ -136,9 +136,9 @@ int HeapDBFile:: GetNext (Record &fetchme, CNF &cnf, Record &literal)
 {
   ComparisonEngine comp;
 
-  while(1 == GetNext(fetchme)) // there are more records
+  while(SUCCESS == GetNext(fetchme)) // there are more records
     {
-      if (comp.Compare(&fetchme,&literal,&cnf)) // check the record
+      if (SUCCESS == comp.Compare(&fetchme,&literal,&cnf)) // check the record
         {
           return 1;
         }
