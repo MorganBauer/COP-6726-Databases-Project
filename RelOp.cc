@@ -25,6 +25,7 @@ void * SelectFile :: WorkerThread(void) {
   Record & literal = *lit;
   int counter = 0;
   Record temp;
+  inFile.MoveFirst ();
   while (SUCCESS == inFile.GetNext (temp, selOp, literal)) {
     counter += 1;
     if (counter % 10000 == 0) {
@@ -60,10 +61,16 @@ void * Sum :: WorkerThread(void) {
   clog << "begin summing" << endl;
   Type retType;
   unsigned int counter = 0;
+  int intresult = 0;
+  double doubleresult = 0.0;
   while(SUCCESS == inPipe.Remove(&temp))
     {
       counter++;
-      retType = computeMe.Apply(temp,integerResult,FPResult);
+      int tr = 0;
+      double td = 0.0;
+      retType = computeMe.Apply(temp,tr,td);
+      intresult += tr;
+      doubleresult += td;
     }
   clog << "summing complete" << endl;
   // sum complete, take value from function and put into outpipe.
@@ -76,14 +83,14 @@ void * Sum :: WorkerThread(void) {
       {
         clog << "int result" << endl;
         attr.myType = Int;
-        ss << integerResult;
+        ss << intresult;
         ss << "|";
       }
     else if (Double == retType) // floating point result
       {
         clog << "double result" << endl;
         attr.myType = Double;
-        ss << FPResult;
+        ss << doubleresult;
         ss << "|";
       }
     Schema retSchema ("out_schema",1,&attr);

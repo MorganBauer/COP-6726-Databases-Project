@@ -41,6 +41,12 @@ operators of c++
 * p3
 don't use Function.tar, broken
 
+Function.Apply, updates whichever of it's arguments is appropriates
+with the value. This value needs to be added to a running total, it is
+not updated by Apply, meerly overwritten with whatever value needs to
+be taken care of by the caller of this funciton. The return value is
+the Type (Int or Double) that is appropriate for the function.
+
 select pipe looks okay
 select file, just uses select pipe, looks fine
 project looks evil, cause we have to deconstruct and reconstruct
