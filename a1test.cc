@@ -15,8 +15,8 @@
 char *dbfile_dir = "/tmp/mhb/"; // dir where binary heap files should be stored
 // char *tpch_dir ="/cise/tmp/dbi_sp11/DATA/1G/"; // dir where dbgen tpch files (extension *.tbl) can be found
 #ifdef linux
-// char *tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
-char *tpch_dir ="/cise/homes/mhb/dbi/origData/"; 
+char *tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
+// char *tpch_dir ="/cise/homes/mhb/dbi/origData/"; 
 #elif __MACH__
 char *tpch_dir ="/Users/morganbauer/Downloads/tpch_2_14_3/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
 #endif
@@ -466,7 +466,7 @@ int main () {
   setup (catalog_path, dbfile_dir, tpch_dir);
 
   void (*test) ();
-  Relation *rel_ptr[] = {n, r, c, p, ps, o, li};
+  Relation *rel_ptr[] = {n, r, c, p, ps, o, li, s};
   void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &testCompare, &testSort, &generateAll};
 
   int tindx = 0;
@@ -483,7 +483,7 @@ int main () {
   }
 
   int findx = 0;
-  while (findx < 1 || findx > 7) {
+  while (findx < 1 || findx > 8) {
     cout << "\n select table: \n";
     cout << "\t 1. nation \n";
     cout << "\t 2. region \n";
@@ -492,6 +492,7 @@ int main () {
     cout << "\t 5. partsupp \n";
     cout << "\t 6. orders \n";
     cout << "\t 7. lineitem \n \t ";
+    cout << "\t 8. supplier \n \t ";
     cin >> findx;
   }
 
