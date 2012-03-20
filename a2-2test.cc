@@ -6,6 +6,7 @@ void test1 ();
 void test2 ();
 void test3 ();
 void test4 ();
+void test6 ();
 
 int add_data (FILE *src, int numrecs, int &res) {
   DBFile dbfile;
@@ -66,11 +67,12 @@ void test1 () {
   int proc = 1, res = 1, tot = 0;
   while (proc && res) {
     int x = 0;
-    while (x < 1 || x > 3) {
+    while (x < 1 || x > 4) {
       cout << "\n select option for : " << rel->path () << endl;
       cout << " \t 1. add a few (1 to 1k recs)\n";
       cout << " \t 2. add a lot (1k to 1e+06 recs) \n";
       cout << " \t 3. run some query \n \t ";
+      cout << " \t 4. add all the records \n \t";
       cin >> x;
       cout << x;
     }
@@ -80,6 +82,8 @@ void test1 () {
       if (proc)
         cout << "\n\t added " << proc << " recs..so far " << tot << endl;
     }
+    else if (x == 4)
+      {}
     else {
       test3 ();
     }
@@ -232,16 +236,63 @@ void test5 ()
   dbfile.Close ();
 }
 
+void test6 ()
+{
+  OrderMaker om;
+  rel->get_sort_order (om);
+
+  int runlen = 0;
+  while (runlen < 1) {
+    cout << "\t\n specify runlength:\n\t ";
+    cin >> runlen;
+  }
+  struct {OrderMaker *om; int l;} startup = {&om, runlen};
+
+  DBFile dbfile;
+  cout << "\n output to dbfile : " << rel->path () << endl;
+  {
+    int rv = dbfile.Create (rel->path(), sorted, &startup); // create
+    cout << "rv = " << rv << endl;
+    assert(SUCCESS == rv);
+    rv = dbfile.Close (); // close
+    cout << "rv = " << rv << endl;
+    assert(1 == rv);
+  }
+
+  char tbl_path[100];
+  sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name());
+  cout << " input from file : " << tbl_path << endl;
+
+  FILE *tblfile = fopen (tbl_path, "r");
+  if (NULL == tblfile)
+    {
+      cout << "tblfile is null" << endl;
+      assert(NULL != tblfile);
+    }
+
+  Record temp;
+  dbfile.Open (rel->path ());
+  int counter = 0;
+  while ((temp.SuckNextRecord (rel->schema (), tblfile)))
+    {
+      counter++;
+      dbfile.Add (temp);
+    }
+  dbfile.Close();
+  cout << "added " << counter << " records" << endl;
+  cout << "done" << endl;
+}
+
 int main (int argc, char *argv[]) {
 
   setup ();
 
   relation *rel_ptr[] = {n, r, c, p, ps, s, o, li};
-  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &test5};
+  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &test5, &test6};
   void (*test) ();
 
   int tindx = 0;
-  while (tindx < 1 || tindx > 5) {
+  while (tindx < 1 || tindx > 6) {
     cout << " select test option: \n";
     cout << " \t 1. create sorted dbfile\n";
     cout << " \t 2. scan a dbfile\n";

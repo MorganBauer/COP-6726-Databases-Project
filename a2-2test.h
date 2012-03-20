@@ -15,8 +15,8 @@ using namespace std;
 char *catalog_path = "catalog";
 //char *tpch_dir ="/cise/tmp/dbi_sp11/DATA/1G/";
 #ifdef linux
-// char *tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
-char *tpch_dir ="/cise/homes/mhb/dbi/origData/"; 
+char *tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
+// char *tpch_dir ="/cise/homes/mhb/dbi/origData/"; 
 #elif __MACH__
 char *tpch_dir ="/Users/morganbauer/Downloads/tpch_2_14_3/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
 #endif
