@@ -44,7 +44,7 @@ int SortedDBFile::Open (char *f_path)
   filepath = f_path;
   f.Open(1, f_path);
   currentRWMode = reading;
-  curPageIndex = 0;
+  MoveFirst();
   cout << "file opened with " << f.GetLength() << " pages" << endl;
   return 0;
 }

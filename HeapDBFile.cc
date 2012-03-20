@@ -20,6 +20,7 @@ HeapDBFile::HeapDBFile () : f(), curPage(), curPageIndex(0)
 int HeapDBFile::Open (char *f_path)
 {
   f.Open(1, f_path);
+  MoveFirst();
   return 0;
 }
 
@@ -69,7 +70,14 @@ void HeapDBFile:: MoveFirst ()
 {
   // consider keeping an index value, rather than holding the page itself.
   curPageIndex = (off_t) 0;
-  f.GetPage(&curPage, curPageIndex);
+  if (0 != f.GetLength())
+    {
+      f.GetPage(&curPage, curPageIndex);
+    }
+  else
+    {
+      curPage.EmptyItOut();
+    }
 }
 void HeapDBFile:: Add (Record &rec)
 {
@@ -109,8 +117,8 @@ int HeapDBFile:: GetNext (Record &fetchme)
     { // page is empty, get next page, if available, and return a record from it.
       // cout << "page " << curPageIndex + 1 << " was depleted." << endl;
       ++curPageIndex;
-      // cout << "attempting to read page " << curPageIndex + 1  << " out of "
-      // << (f.GetLength() - 1) << "... ";
+      // clog << "attempting to read page " << curPageIndex + 1  << " out of "
+      //      << (f.GetLength() - 1) << "... " << endl;
       if(curPageIndex + 1 <= f.GetLength() - 1) // if there are still more pages to read.
         {
           // cout << "successful" << endl;
@@ -135,13 +143,15 @@ int HeapDBFile:: GetNext (Record &fetchme)
 int HeapDBFile:: GetNext (Record &fetchme, CNF &cnf, Record &literal)
 {
   ComparisonEngine comp;
-
   while(SUCCESS == GetNext(fetchme)) // there are more records
     {
       if (SUCCESS == comp.Compare(&fetchme,&literal,&cnf)) // check the record
         {
           return 1;
         }
+      else {
+        clog << "failed getnext cnf match" << endl;
+      }
     }
   return 0;
 }

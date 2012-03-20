@@ -24,7 +24,8 @@ the relation data structure in the test header files, needs to call delete on
 the schema pointer it contains
 
 * p1
-
+there is an implicit MoveFirst on open. at least, the way it is used
+in later tests implies this is true.
 * p2-1
 
 generically, make sure the comparison function works.
