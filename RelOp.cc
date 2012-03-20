@@ -59,8 +59,10 @@ void * Sum :: WorkerThread(void) {
   Record temp;
   clog << "begin summing" << endl;
   Type retType;
+  unsigned int counter = 0;
   while(SUCCESS == inPipe.Remove(&temp))
     {
+      counter++;
       retType = computeMe.Apply(temp,integerResult,FPResult);
     }
   clog << "summing complete" << endl;
@@ -89,5 +91,6 @@ void * Sum :: WorkerThread(void) {
     outPipe.Insert(&ret);
   }
   outPipe.ShutDown();
+  clog << "Sum ending, after seeing " << counter << " records." << endl;
   pthread_exit(NULL); // make our worker thread go away
 }
