@@ -150,7 +150,6 @@ int HeapDBFile:: GetNext (Record &fetchme, CNF &cnf, Record &literal)
           return 1;
         }
       else {
-        clog << "failed getnext cnf match" << endl;
       }
     }
   return 0;
