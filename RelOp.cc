@@ -101,3 +101,26 @@ void * Sum :: WorkerThread(void) {
   clog << "Sum ending, after seeing " << counter << " records." << endl;
   pthread_exit(NULL); // make our worker thread go away
 }
+
+
+void * Project :: thread_starter(void *context)
+{
+  clog << "starting project thread" << endl;
+  return reinterpret_cast<Project*>(context)->WorkerThread();
+}
+
+void * Project :: WorkerThread(void) {
+  Pipe &inPipe = *in;
+  Pipe &outPipe = *out;
+  Record temp;
+  unsigned int counter = 0;
+  while(SUCCESS == inPipe.Remove(&temp))
+    {
+      counter++;
+      temp.Project(atts, numAttsOut,numAttsIn);
+      outPipe.Insert(&temp);
+    }
+  outPipe.ShutDown();
+  clog << "projected " << counter << " records." << endl;
+  pthread_exit(NULL); // make our worker thread go away
+}

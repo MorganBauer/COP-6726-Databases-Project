@@ -41,21 +41,42 @@ class SelectPipe : public RelationalOp {
 };
 
 class Project : public RelationalOp { 
-  int runLength;
-  
+  Pipe * in;
+  Pipe * out;
+  int * atts;
+  int numAttsIn;
+  int numAttsOut;
+
   pthread_t ProjectThread;
   static void *thread_starter(void *context);
   void * WorkerThread(void);
 	public:
+  Project () : in(0), out(0), atts(0), numAttsIn(0), numAttsOut(0) {}
 	void Run (Pipe &inPipe, Pipe &outPipe, int *keepMe, int numAttsInput, int numAttsOutput) {
-          // loop for numattsOut over Keepme
+          in = &inPipe;
+          out = &outPipe;
+          atts = keepMe;
+          numAttsIn = numAttsInput;
+          numAttsOut = numAttsOutput;
+          clog << "P pthread create" << endl;
+          pthread_create (&ProjectThread, NULL, &Project::thread_starter, this);
         }
-	void WaitUntilDone () { }
+	void WaitUntilDone () {  
+          clog << "P waiting til done" << endl;
+          pthread_join (ProjectThread, NULL);
+          clog << "P complete, joined" << endl;
+        }
 };
 
 class Join : public RelationalOp { 
 	public:
-	void Run (Pipe &inPipeL, Pipe &inPipeR, Pipe &outPipe, CNF &selOp, Record &literal) { }
+	void Run (Pipe &inPipeL, Pipe &inPipeR, Pipe &outPipe, CNF &selOp, Record &literal) { 
+          OrderMaker left;
+          OrderMaker right;
+          
+          selOp.GetSortOrders(left, right);
+          outPipe.ShutDown();
+        }
 	void WaitUntilDone () { }
 };
 
@@ -66,7 +87,6 @@ class DuplicateRemoval : public RelationalOp {
 };
 
 class Sum : public RelationalOp {
-  int runLength;
   int integerResult;
   double FPResult;
 
@@ -77,7 +97,7 @@ class Sum : public RelationalOp {
   static void *thread_starter(void *context);
   void * WorkerThread(void);
 	public:
- Sum() :runLength(0), integerResult(0),FPResult(0),in(0),out(0),fn(0) {}
+ Sum() : integerResult(0),FPResult(0),in(0),out(0),fn(0) {}
 	void Run (Pipe &inPipe, Pipe &outPipe, Function &computeMe) { 
           in = &inPipe;
           out = &outPipe;
