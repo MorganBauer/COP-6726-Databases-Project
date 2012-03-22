@@ -115,6 +115,7 @@ void q1 () {
 
 // select p_partkey(0), p_name(1), p_retailprice(7) from part where (p_retailprice > 931.01) AND (p_retailprice < 931.3);
 // expected output: 22 records
+// also a typo? 12 records?
 void q2 () {
 
 	char *pred_p = "(p_retailprice > 931.01) AND (p_retailprice < 931.3)";
@@ -135,7 +136,7 @@ void q2 () {
 
 	Attribute att3[] = {IA, SA, DA};
 	Schema out_sch ("out_sch", numAttsOut, att3);
-	int cnt = clear_pipe (_p, p->schema (), true);
+	int cnt = clear_pipe (_out, &out_sch, true);
 
 	cout << "\n\n query2 returned " << cnt << " records \n";
 
