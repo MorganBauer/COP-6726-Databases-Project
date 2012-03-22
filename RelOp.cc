@@ -122,5 +122,30 @@ void * Project :: WorkerThread(void) {
     }
   outPipe.ShutDown();
   clog << "projected " << counter << " records." << endl;
+
+}
+
+void * Join :: thread_starter(void *context)
+{
+  clog << "starting join thread" << endl;
+  return reinterpret_cast<Join*>(context)->WorkerThread();
+}
+
+void * Join :: WorkerThread(void) {
+  Pipe& inPipeL = *inL;
+  Pipe& inPipeR = *inR;
+  Pipe& outPipe = *out;
+  CNF& selOp = *cnf;
+  OrderMaker sortOrderL;
+  OrderMaker sortOrderR;
+  selOp.GetSortOrders(sortOrderL, sortOrderL);
+  runLength = 100;
+  Pipe outPipeL(runLength);
+  Pipe outPipeR(runLength);
+  BigQ left(inPipeL,outPipeL,sortOrderL,runLength);
+  BigQ Right(inPipeR,outPipeR,sortOrderR,runLength);
+  clog << "BigQs initialized" << endl;
+
+  outPipe.ShutDown();
   pthread_exit(NULL); // make our worker thread go away
 }

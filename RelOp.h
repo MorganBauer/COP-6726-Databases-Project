@@ -8,6 +8,7 @@
 #include <string>
 
 class RelationalOp {
+ protected:
   int runLength;
 	public:
 	// blocks the caller until the particular relational operator 
@@ -68,22 +69,41 @@ class Project : public RelationalOp {
         }
 };
 
-class Join : public RelationalOp { 
+class Join : public RelationalOp {
+  Pipe * inL;
+  Pipe * inR;
+  Pipe * out;
+  CNF * cnf;
+
+
+  pthread_t JoinThread;
+  static void *thread_starter(void *context);
+  void * WorkerThread(void);
 	public:
-	void Run (Pipe &inPipeL, Pipe &inPipeR, Pipe &outPipe, CNF &selOp, Record &literal) { 
-          OrderMaker left;
-          OrderMaker right;
-          
-          selOp.GetSortOrders(left, right);
-          outPipe.ShutDown();
+	void Run (Pipe &inPipeL, Pipe &inPipeR, Pipe &outPipe, CNF &selOp, Record &literal) {
+          inL = &inPipeL;
+          inR = &inPipeR;
+          out = &outPipe;
+          cnf = & selOp;
         }
-	void WaitUntilDone () { }
+	void WaitUntilDone () {
+          clog << "J waiting til done" << endl;
+          pthread_join (JoinThread, NULL);
+          clog << "J complete, joined" << endl;
+        }
 };
 
 class DuplicateRemoval : public RelationalOp {
+  pthread_t DuplicateRemovalThread;
+  static void *thread_starter(void *context);
+  void * WorkerThread(void);
 	public:
 	void Run (Pipe &inPipe, Pipe &outPipe, Schema &mySchema) { }
-	void WaitUntilDone () { }
+	void WaitUntilDone () { 
+          clog << "DR waiting til done" << endl;
+          pthread_join (DuplicateRemovalThread, NULL);
+          clog << "DR complete, joined" << endl;
+        }
 };
 
 class Sum : public RelationalOp {
@@ -111,12 +131,20 @@ class Sum : public RelationalOp {
           clog << "Sum complete, joined" << endl;
         }
 };
+
 class GroupBy : public RelationalOp {
+  pthread_t GroupByThread;
+  static void *thread_starter(void *context);
+  void * WorkerThread(void);
 	public:
 	void Run (Pipe &inPipe, Pipe &outPipe, OrderMaker &groupAtts, Function &computeMe) { }
 	void WaitUntilDone () { }
 };
+
 class WriteOut : public RelationalOp {
+  pthread_t WriteOutThread;
+  static void *thread_starter(void *context);
+  void * WorkerThread(void);
 	public:
 	void Run (Pipe &inPipe, FILE *outFile, Schema &mySchema) { }
 	void WaitUntilDone () { }
