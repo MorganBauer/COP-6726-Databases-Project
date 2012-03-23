@@ -11,7 +11,7 @@ class RelationalOp {
  protected:
   int runLength;
 	public:
-	// blocks the caller until the particular relational operator 
+	// blocks the caller until the particular relational operator
 	// has run to completion
 	virtual void WaitUntilDone () = 0;
 
@@ -19,7 +19,7 @@ class RelationalOp {
 	void Use_n_Pages (int n) {runLength = n; return;}
 };
 
-class SelectFile : public RelationalOp { 
+class SelectFile : public RelationalOp {
  private:
   DBFile * inF;
   Pipe * outP;
@@ -41,7 +41,7 @@ class SelectPipe : public RelationalOp {
 	void WaitUntilDone () { }
 };
 
-class Project : public RelationalOp { 
+class Project : public RelationalOp {
   Pipe * in;
   Pipe * out;
   int * atts;
@@ -62,7 +62,7 @@ class Project : public RelationalOp {
           clog << "P pthread create" << endl;
           pthread_create (&ProjectThread, NULL, &Project::thread_starter, this);
         }
-	void WaitUntilDone () {  
+	void WaitUntilDone () {
           clog << "P waiting til done" << endl;
           pthread_join (ProjectThread, NULL);
           clog << "P complete, joined" << endl;
@@ -110,7 +110,7 @@ class DuplicateRemoval : public RelationalOp {
           compare = OrderMaker(&mySchema);
           pthread_create (&DuplicateRemovalThread, NULL, &DuplicateRemoval::thread_starter, this);
         }
-	void WaitUntilDone () { 
+	void WaitUntilDone () {
           clog << "DR waiting til done" << endl;
           pthread_join (DuplicateRemovalThread, NULL);
           clog << "DR complete, joined" << endl;
@@ -129,7 +129,7 @@ class Sum : public RelationalOp {
   void * WorkerThread(void);
 	public:
  Sum() : integerResult(0),FPResult(0),in(0),out(0),fn(0) {}
-	void Run (Pipe &inPipe, Pipe &outPipe, Function &computeMe) { 
+	void Run (Pipe &inPipe, Pipe &outPipe, Function &computeMe) {
           in = &inPipe;
           out = &outPipe;
           fn = &computeMe;
@@ -153,11 +153,24 @@ class GroupBy : public RelationalOp {
 };
 
 class WriteOut : public RelationalOp {
+  Pipe * in;
+  FILE * out;
+  Schema * sch;
   pthread_t WriteOutThread;
   static void *thread_starter(void *context);
   void * WorkerThread(void);
 	public:
-	void Run (Pipe &inPipe, FILE *outFile, Schema &mySchema) { }
-	void WaitUntilDone () { }
+	void Run (Pipe &inPipe, FILE *outFile, Schema &mySchema) {
+          in = &inPipe;
+          out = outFile;
+          sch = &mySchema;
+          clog << "W pthread create" << endl;
+          pthread_create (&WriteOutThread, NULL, &WriteOut::thread_starter, this);
+        }
+	void WaitUntilDone () {
+          clog << "W waiting til done" << endl;
+          pthread_join (WriteOutThread, NULL);
+          clog << "W complete, joined" << endl;
+        }
 };
 #endif

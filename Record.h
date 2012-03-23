@@ -1,6 +1,7 @@
 #ifndef RECORD_H
 #define RECORD_H
 
+#include <iostream>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -12,8 +13,6 @@
 #include "File.h"
 #include "Comparison.h"
 #include "ComparisonEngine.h"
-
-
 
 // Basic record data structure. Data is actually stored in "bits" field. The layout of bits is as follows:
 //	1) First sizeof(int) bytes: length of the record in bytes
@@ -73,6 +72,8 @@ public:
 	// prints the contents of the record; this requires
 	// that the schema also be given so that the record can be interpreted
 	void Print (Schema *mySchema);
+        // same as above, put prints to an ostream explicitly given, rather than standard out.
+        void Print (Schema *mySchema, std::ostream & os);
 };
 
 #endif

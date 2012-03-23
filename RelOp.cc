@@ -166,9 +166,6 @@ void * DuplicateRemoval :: WorkerThread(void) {
   BigQ sorter(inPipe, sortedOutput, compare, runLength);
   clog << "BigQ initialized" << endl;
   Record recs[2];
-  Record * one;
-  Record * two;
-  Record temp;
   unsigned counter = 0;
 
   if(SUCCESS == sortedOutput.Remove(&recs[1]))
@@ -179,20 +176,42 @@ void * DuplicateRemoval :: WorkerThread(void) {
       counter++;
     }
 
-  int i;
+  unsigned int i = 0;
   ComparisonEngine ceng;
   while(SUCCESS == sortedOutput.Remove(&recs[i%2]))
     {
-      if (0 == ceng.Compare(&recs[0],&recs[1],&compare)) // elements are the same
+      if (0 == ceng.Compare(&recs[i%2],&recs[(i+1)%2],&compare)) // elements are the same
         { // do nothing, put it in the pipe earlier.
         }
       else // elements are different, thus there is a new element.
         {
           counter++;
-          outPipe.Insert(&temp); // put it in the pipe.
+          Record copy;
+          copy.Copy(&recs[i%2]); // make a copy
+          outPipe.Insert(&copy); // put it in the pipe.
+          i++; // switch slots.
         }
     }
 
   outPipe.ShutDown();
+  pthread_exit(NULL); // make our worker thread go away
+}
+
+void * WriteOut :: thread_starter(void *context)
+{
+  clog << "starting WriteOut thread" << endl;
+  return reinterpret_cast<WriteOut*>(context)->WorkerThread();
+}
+
+void * WriteOut :: WorkerThread(void) {
+  Pipe& inPipe = *in;
+
+  Record temp;
+  while(SUCCESS == inPipe.Remove(&temp))
+    {
+      ostringstream os;
+      temp.Print(sch,os);
+      fputs(os.str().c_str(),out);
+    }
   pthread_exit(NULL); // make our worker thread go away
 }
