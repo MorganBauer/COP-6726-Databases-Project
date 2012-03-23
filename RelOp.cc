@@ -139,7 +139,7 @@ void * Join :: WorkerThread(void) {
   OrderMaker sortOrderL;
   OrderMaker sortOrderR;
   selOp.GetSortOrders(sortOrderL, sortOrderL);
-  runLength = 100;
+
   Pipe outPipeL(runLength);
   Pipe outPipeR(runLength);
   BigQ left(inPipeL,outPipeL,sortOrderL,runLength);
@@ -160,7 +160,6 @@ void * DuplicateRemoval :: WorkerThread(void) {
   Pipe& inPipe = *in;
   Pipe& outPipe = *out;
 
-  runLength = 100;
   Pipe sortedOutput(runLength);
 
   BigQ sorter(inPipe, sortedOutput, compare, runLength);
