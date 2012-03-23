@@ -43,7 +43,7 @@ void * BigQ :: WorkerThread(void) {
     {
       PhaseTwoPriorityQueue();
     }
-
+  clog << endl << "MERGE COMPLETE" << endl;
   // cout << "cleanup" << endl;
   partiallySortedFile.Close();
   // Cleanup
@@ -51,7 +51,7 @@ void * BigQ :: WorkerThread(void) {
   // finally shut down the out pipe
   // this lets the consumer thread know that there will not be anything else put into the pipe
   out.ShutDown ();
-  // cout << endl << "BIGQ FINISHED" << endl;
+  //cout << endl << "BIGQ FINISHED" << endl;
   pthread_exit(NULL); // make our worker thread go away
 }
 
@@ -164,7 +164,7 @@ int BigQ :: writeSortedRunToFile(vector<Record> & runlenrecords)
 
 void BigQ::PhaseTwoLinearScan(void)
 {
-  cout << endl << endl << "Linear Scan Merge of sorted runs" << endl;
+  clog << endl << endl << "Linear Scan Merge of sorted runs" << endl;
   // cout << runCount << " runs in " << partiallySortedFile.GetLength() << " total pages" << endl;
   for (std::vector < std::pair <off_t,off_t> >::iterator it = runLocations.begin(); it < runLocations.end(); it++)
     {
@@ -215,6 +215,10 @@ void BigQ::PhaseTwoLinearScan(void)
           Record tr;
           tr.Consume(&(minimums[run]));
           recordsOut++;
+          if (0 == recordsOut % 10000)
+            {
+              clog << recordsOut << " ";
+            }
           out.Insert(&tr);
           bool valid = runs[run].getNextRecord(tr);
           if (valid)
