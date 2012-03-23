@@ -85,6 +85,8 @@ class Join : public RelationalOp {
           inR = &inPipeR;
           out = &outPipe;
           cnf = & selOp;
+          clog << "Join pthread create" << endl;
+          pthread_create (&JoinThread, NULL, &Join::thread_starter, this);
         }
 	void WaitUntilDone () {
           clog << "J waiting til done" << endl;
@@ -94,11 +96,20 @@ class Join : public RelationalOp {
 };
 
 class DuplicateRemoval : public RelationalOp {
+  Pipe * in;
+  Pipe * out;
+  OrderMaker compare;
+
   pthread_t DuplicateRemovalThread;
   static void *thread_starter(void *context);
   void * WorkerThread(void);
 	public:
-	void Run (Pipe &inPipe, Pipe &outPipe, Schema &mySchema) { }
+	void Run (Pipe &inPipe, Pipe &outPipe, Schema &mySchema) {
+          in = &inPipe;
+          out = &outPipe;
+          compare = OrderMaker(&mySchema);
+          pthread_create (&DuplicateRemovalThread, NULL, &DuplicateRemoval::thread_starter, this);
+        }
 	void WaitUntilDone () { 
           clog << "DR waiting til done" << endl;
           pthread_join (DuplicateRemovalThread, NULL);

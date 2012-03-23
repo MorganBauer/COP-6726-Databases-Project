@@ -149,3 +149,50 @@ void * Join :: WorkerThread(void) {
   outPipe.ShutDown();
   pthread_exit(NULL); // make our worker thread go away
 }
+
+void * DuplicateRemoval :: thread_starter(void *context)
+{
+  clog << "starting DuplicateRemoval thread" << endl;
+  return reinterpret_cast<DuplicateRemoval*>(context)->WorkerThread();
+}
+
+void * DuplicateRemoval :: WorkerThread(void) {
+  Pipe& inPipe = *in;
+  Pipe& outPipe = *out;
+
+  runLength = 100;
+  Pipe sortedOutput(runLength);
+
+  BigQ sorter(inPipe, sortedOutput, compare, runLength);
+  clog << "BigQ initialized" << endl;
+  Record recs[2];
+  Record * one;
+  Record * two;
+  Record temp;
+  unsigned counter = 0;
+
+  if(SUCCESS == sortedOutput.Remove(&recs[1]))
+    {
+      Record copy;
+      copy.Copy(&recs[1]);
+      outPipe.Insert(&copy);
+      counter++;
+    }
+
+  int i;
+  ComparisonEngine ceng;
+  while(SUCCESS == sortedOutput.Remove(&recs[i%2]))
+    {
+      if (0 == ceng.Compare(&recs[0],&recs[1],&compare)) // elements are the same
+        { // do nothing, put it in the pipe earlier.
+        }
+      else // elements are different, thus there is a new element.
+        {
+          counter++;
+          outPipe.Insert(&temp); // put it in the pipe.
+        }
+    }
+
+  outPipe.ShutDown();
+  pthread_exit(NULL); // make our worker thread go away
+}
