@@ -355,8 +355,9 @@ where l_returnflag = 'R' and l_discount < 0.04 or
 l_returnflag = 'R' and l_shipmode = 'MAIL';
 
 ANSWER: 671392 rows in set (29.45 sec)
-
-
+*/
+  
+/*
 possible plan:
 	SF (l_returnflag = 'R' and ...) => _l
 	On _l:
@@ -364,7 +365,37 @@ possible plan:
 	On __l:
 		W (__l)
 */
-	cout << " TBA\n";
+  // char *pred_li = "(l_returnflag = \"R\" AND l_discount < 0.04) OR (l_returnflag = \"R\" AND l_shipmode = \"MAIL\")";
+  // char *pred_li = "(l_returnflag = 'R') AND (l_discount < 0.04) OR (l_returnflag = 'R') AND (l_shipmode = \"MAIL\")";
+  char *pred_li = "(l_returnflag = 'R') AND (l_discount < 0.04 OR l_shipmode = 'MAIL')";
+  init_SF_li (pred_li, 100);
+
+  SF_ps.Run (dbf_li, _li, cnf_li, lit_li); // start the pipe.
+  // now have _li to connect to project;
+  
+  Project P_li;
+  Pipe _out (pipesz);
+  // keep only: orderkey, partkey, suppkey, which are the first three, 0,1,2, and are all ints
+  int keepMe[] = {0,1,2};
+  int numAttsIn = liAtts;
+  int numAttsOut = 3;
+  
+  P_li.Run (_li, _out, keepMe, numAttsIn, numAttsOut);
+  // now have _out to connect to write out.
+
+  WriteOut W;
+  // inpipe = ___ps
+  char *fwpath = "ps.w.tmp";
+  FILE *writefile = fopen (fwpath, "w");
+
+  Attribute att3[] = {IA, IA, IA};
+  Schema out_sch ("out_sch", numAttsOut, att3);
+
+  W.Run (_out, writefile, out_sch);
+        
+  SF_ps.WaitUntilDone ();
+  P_li.WaitUntilDone();
+  W.WaitUntilDone();
 }
 
 int main (int argc, char *argv[]) {
@@ -377,8 +408,8 @@ int main (int argc, char *argv[]) {
                      << "4. SelectFile & Join" << endl
                      << "5. SelectFile & Project & DuplicateRemoval & WriteOut" << endl
                      << "6. SelectFile & Join & GroupBy" << endl
-                     << "7. " << endl
-                     << "8. " << endl;
+                     << "7. SelectFile & Join & Join & WriteOut" << endl
+                     << "8. SelectFile & Project & WriteOut" << endl;
 		exit (-1);
 	}
 
