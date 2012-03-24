@@ -108,6 +108,18 @@ void test4 ()
   test2 ();
 }
 
+void test5 ()
+{
+  DBFile dbfile;
+  Record temp; // hold a record
+
+  dbfile.Open (rel->path()); // IMPLEMENTED FOR TEST-TWO
+  dbfile.MoveFirst();
+  dbfile.GetNext(temp); //Get the first record
+
+  clog << "record has number of records: " << temp.GetNumAtts() << endl;
+}
+ 
 void generateAll ()
 {
   DBFile dbfile;
@@ -467,10 +479,10 @@ int main () {
 
   void (*test) ();
   Relation *rel_ptr[] = {n, r, c, p, ps, o, li, s};
-  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &testCompare, &testSort, &generateAll};
+  void (*test_ptr[]) () = {&test1, &test2, &test3, &test4, &testCompare, &testSort, &generateAll, &test5};
 
   int tindx = 0;
-  while (tindx < 1 || tindx > 6) {
+  while (tindx < 1 || tindx > 8) {
     cout << " select test: \n";
     cout << " \t 1. load file \n";
     cout << " \t 2. scan \n";

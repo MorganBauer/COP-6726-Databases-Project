@@ -3,8 +3,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <iostream>
-
 
 Record :: Record () : bits(NULL)
 {}
@@ -265,6 +263,15 @@ char* Record :: GetBits (void) {
   return bits;
 }
 
+int Record :: GetNumAtts (void)
+{
+  char * bitsPtr;
+  bitsPtr = bits;
+  bitsPtr += sizeof(int);
+  int firstRecOffset = *((int *) bitsPtr);
+  int numAtts = (firstRecOffset/(sizeof(int))) -1;
+  return numAtts;
+}
 
 void Record :: CopyBits(char * _bits, int b_len) {
 

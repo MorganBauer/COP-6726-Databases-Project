@@ -17,7 +17,6 @@
 // Basic record data structure. Data is actually stored in "bits" field. The layout of bits is as follows:
 //	1) First sizeof(int) bytes: length of the record in bytes
 //	2) Next sizeof(int) bytes: byte offset to the start of the first att
-//	3) Byte offset to the start of the att in position numAtts
 //	4) Bits encoding the record's data
 
 class Record {
@@ -38,6 +37,8 @@ public:
         Record & operator = (Record const & r);
         ~Record();
         
+        // return the number of attributes in the record
+        int GetNumAtts(void);
 
 	// suck the contents of the record fromMe into this; note that after
 	// this call, fromMe will no longer have anything inside of it
