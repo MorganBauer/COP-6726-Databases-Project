@@ -35,8 +35,9 @@ public:
 	Record ();
 	Record (const Record & r);
         Record & operator = (Record const & r);
+        bool isNull (); // returns true if null, false if not
         ~Record();
-        
+
         // return the number of attributes in the record
         int GetNumAtts(void);
 
@@ -45,7 +46,7 @@ public:
         // strictly speaking, it will have an invalid reference, NULL to be specific
 	void Consume (Record *fromMe);
 
-	// make a copy of the record copyMe; note that this is far more 
+	// make a copy of the record copyMe; note that this is far more
 	// expensive (requiring a bit-by-bit copy) than Consume, which is
 	// only a pointer operation
 	void Copy (Record *copyMe);
@@ -57,7 +58,7 @@ public:
 
 	int ComposeRecord (Schema *mySchema, const char *src);
 
-	// this projects away various attributes... 
+	// this projects away various attributes...
 	// the array attsToKeep should be sorted, and lists all of the attributes
 	// that should still be in the record after Project is called.  numAttsNow
 	// tells how many attributes are currently in the record
@@ -67,7 +68,7 @@ public:
 	// this is useful for a join operation
 	// attsToKeep[] = {0, 1, 2, 0, 2, 4} --gets 0,1,2 records from left 0, 2, 4 recs from right and startOfRight=3
 	// startOfRight is the index position in attsToKeep for the first att from right rec
-	void MergeRecords (Record *left, Record *right, int numAttsLeft, 
+	void MergeRecords (Record *left, Record *right, int numAttsLeft,
 		int numAttsRight, int *attsToKeep, int numAttsToKeep, int startOfRight);
 
 	// prints the contents of the record; this requires

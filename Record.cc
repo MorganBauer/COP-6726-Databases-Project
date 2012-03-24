@@ -29,10 +29,20 @@ Record & Record :: operator = (Record const & r)
     {
       delete [] bits;
       bits = NULL;
-      bits = new (std::nothrow) char[((int *) r.bits)[0]]; // otherwise, allocate our storage
-      memcpy (bits, r.bits, ((int *) r.bits)[0]); // and make a copy
+      if(NULL != r.bits)
+        {
+          bits = new (std::nothrow) char[((int *) r.bits)[0]]; // otherwise, allocate our storage
+          memcpy (bits, r.bits, ((int *) r.bits)[0]); // and make a copy
+        }
     }
   return * this;
+}
+
+bool Record :: isNull ()
+{
+  if (NULL == bits)
+    return true;
+  return false;
 }
 
 Record :: ~Record () {
@@ -60,7 +70,7 @@ int Record :: ComposeRecord (Schema *mySchema, const char *src) {
 	}
 
 	// clear out the present record
-	if (bits != NULL) 
+	if (bits != NULL)
 		delete [] bits;
 	bits = NULL;
 
@@ -74,7 +84,7 @@ int Record :: ComposeRecord (Schema *mySchema, const char *src) {
 	// loop through all of the attributes
 	int cursor = 0;
 	for (int i = 0; i < n; i++) {
-		
+
 		// first we suck in the next attribute value
 		int len = 0;
 		while (1) {
@@ -100,7 +110,7 @@ int Record :: ComposeRecord (Schema *mySchema, const char *src) {
 
 		// then we convert the data to the correct binary representation
 		if (atts[i].myType == Int) {
-			*((int *) &(recSpace[currentPosInRec])) = atoi (space);	
+			*((int *) &(recSpace[currentPosInRec])) = atoi (space);
 			currentPosInRec += sizeof (int);
 
 		} else if (atts[i].myType == Double) {
@@ -122,11 +132,11 @@ int Record :: ComposeRecord (Schema *mySchema, const char *src) {
 				len += sizeof (int) - (len % sizeof (int));
 			}
 
-			strcpy (&(recSpace[currentPosInRec]), space); 
+			strcpy (&(recSpace[currentPosInRec]), space);
 			currentPosInRec += len;
 
-		} 
-		
+		}
+
 	}
 
 	// the last thing is to set up the pointer to just past the end of the reocrd
@@ -140,7 +150,7 @@ int Record :: ComposeRecord (Schema *mySchema, const char *src) {
 		exit(1);
 	}
 
-	memcpy (bits, recSpace, currentPosInRec);	
+	memcpy (bits, recSpace, currentPosInRec);
 
 	delete [] space;
 	delete [] recSpace;
