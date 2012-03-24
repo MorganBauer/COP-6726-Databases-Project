@@ -6,17 +6,21 @@
 #include "Record.h"
 #include "Function.h"
 #include <string>
+#include <vector>
 
 class RelationalOp {
  protected:
   int runLength;
 	public:
+ RelationalOp() : runLength(100)
+  {}
 	// blocks the caller until the particular relational operator
 	// has run to completion
 	virtual void WaitUntilDone () = 0;
 
 	// tell us how much internal memory the operation can use
-	void Use_n_Pages (int n) {runLength = n; return;}
+	void Use_n_Pages (int n) {runLength = n; clog << "runLength is now " << runLength << endl; return;}
+        int GetRunLength (void) {return runLength;}
 };
 
 class SelectFile : public RelationalOp {
@@ -75,10 +79,11 @@ class Join : public RelationalOp {
   Pipe * out;
   CNF * cnf;
 
-
   pthread_t JoinThread;
   static void *thread_starter(void *context);
   void * WorkerThread(void);
+
+  Record FillBuffer(vector<Record> &buffer, Pipe & pipe, OrderMaker & sortOrder);
 	public:
 	void Run (Pipe &inPipeL, Pipe &inPipeR, Pipe &outPipe, CNF &selOp, Record &literal) {
           inL = &inPipeL;

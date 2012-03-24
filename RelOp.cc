@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <cassert>
 
 void SelectFile::Run (DBFile &inFile_, Pipe &outPipe_, CNF &selOp_, Record &literal_) {
   clog << "select file starting" << endl;
@@ -122,7 +123,7 @@ void * Project :: WorkerThread(void) {
     }
   outPipe.ShutDown();
   clog << "projected " << counter << " records." << endl;
-
+  pthread_exit(NULL); // make our worker thread go away
 }
 
 void * Join :: thread_starter(void *context)
@@ -138,16 +139,141 @@ void * Join :: WorkerThread(void) {
   CNF& selOp = *cnf;
   OrderMaker sortOrderL;
   OrderMaker sortOrderR;
-  selOp.GetSortOrders(sortOrderL, sortOrderL);
+  bool validOrderMaker = (0 < selOp.GetSortOrders(sortOrderL, sortOrderR));
+  if(validOrderMaker)
+    {clog << "ordermakers are valid, sort-merge join" << endl;}
+  else
+    {clog << "ordermakers are not valid, block nested loop join" << endl;}
 
-  Pipe outPipeL(runLength);
-  Pipe outPipeR(runLength);
-  BigQ left(inPipeL,outPipeL,sortOrderL,runLength);
-  BigQ Right(inPipeR,outPipeR,sortOrderR,runLength);
-  clog << "BigQs initialized" << endl;
+  {
+    clog << runLength << endl;
+    Pipe outPipeL(runLength);
+    Pipe outPipeR(runLength);
+    BigQ Left(inPipeL,outPipeL,sortOrderL,runLength);
+    BigQ Right(inPipeR,outPipeR,sortOrderR,runLength);
+    clog << "BigQs initialized" << endl;
+    Record LeftRecord;
+    Record RightRecord;
+    unsigned int counter = 0;
+    clog << "getting first records" << endl;
+    outPipeL.Remove(&LeftRecord);
+    counter++;
+    clog << "left record" << endl;
+    outPipeR.Remove(&RightRecord);
+    counter++;
+    clog << "right record" << endl;
 
+    int LeftNumAtts = LeftRecord.GetNumAtts();
+    int RightNumAtts = RightRecord.GetNumAtts();
+    int NumAttsTotal = LeftNumAtts + RightNumAtts;
+
+    int * attsToKeep = (int *)alloca(sizeof(int) * NumAttsTotal);
+    clog << "setup atts" << endl;
+    // consider factoring this into a MergeRecords that takes just two records.
+    { // setup AttsToKeep for MergeRecords
+      int curEl = 0;
+      for (int i = 0; i < LeftNumAtts; i++)
+        {
+          attsToKeep[curEl] = i;
+          curEl++;
+        }
+      for (int i = 0; i < RightNumAtts; i++)
+        {
+          attsToKeep[curEl] = i;
+          curEl++;
+        }
+    }
+    clog << "atts set up" << endl;
+    // assert(1 == 2);
+    ComparisonEngine ceng;
+    do {
+      if (0 == counter % 10000)
+        { clog << "loop begin" << counter << " "; }
+      // int result = ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR);
+      if(0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
+        { // pos, left is greater than right.
+          // left is greater, right is lesser
+          // advance right until 0.
+          do
+            {
+              // clog << "discard right" << endl;
+              counter++;
+              if(FAILURE == outPipeR.Remove(&RightRecord))
+                { Record empty; RightRecord.Consume(&empty); break; }
+            }
+          while (0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR));
+        }
+      if(0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
+        {
+          // right is greater, left is lesser.
+          // advance left until equal
+          do
+            {
+              // clog << "discard left" << endl;
+              counter++;
+              if(FAILURE == outPipeL.Remove(&LeftRecord))
+                { Record empty; RightRecord.Consume(&empty); break; }
+            }
+          while (0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR));
+        }
+      if (0 == ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
+        {
+          // records are the same
+          // fill both left/right buffers until they change.
+          // consider using std::async in the future.
+          vector<Record> LeftBuffer;
+          LeftBuffer.push_back(LeftRecord);
+          vector<Record> RightBuffer;
+          RightBuffer.push_back(RightRecord);
+          LeftRecord  = FillBuffer( LeftBuffer, outPipeL, sortOrderL);
+          RightRecord = FillBuffer(RightBuffer, outPipeR, sortOrderR);
+          // counter += LeftBuffer.size();
+          // counter += RightBuffer.size();
+          // merge buffers of records.
+          for(vector<Record>::iterator itL = LeftBuffer.begin(); itL != LeftBuffer.end(); ++itL)
+            {
+              Record * left = &(*(itL));
+              for(vector<Record>::iterator itR = RightBuffer.begin(); itR != RightBuffer.end(); ++itR)
+                {
+                  Record * right = &(*(itR));
+                  Record MergedRecord;
+                  MergedRecord.MergeRecords(left,right,LeftNumAtts,RightNumAtts,attsToKeep,NumAttsTotal,LeftNumAtts);
+                  // void MergeRecords (Record *left, Record *right, int numAttsLeft,
+                  //                    int numAttsRight, int *attsToKeep, int numAttsToKeep, int startOfRight);
+                  outPipe.Insert(&MergedRecord);
+                }
+            }
+          // empty buffers
+          LeftBuffer.clear();
+          RightBuffer.clear();
+        }
+    } while (!outPipeL.Done() || !outPipeR.Done() || !LeftRecord.isNull() || !RightRecord.isNull()); // there is something in either pipes
+  }
+  clog << "at the end" << endl;
   outPipe.ShutDown();
   pthread_exit(NULL); // make our worker thread go away
+}
+
+Record Join :: FillBuffer(vector<Record> &buffer, Pipe & pipe, OrderMaker & sortOrder)
+{
+  // clog << "filling a buffer" << endl;
+  ComparisonEngine ceng;
+  Record temp;
+  if (FAILURE == pipe.Remove(&temp))
+    {
+      Record fail;
+      return fail;
+    }
+  while(0 == ceng.Compare(&buffer[0], &temp, &sortOrder))
+    {
+      buffer.push_back(temp);
+      if (FAILURE == pipe.Remove(&temp))
+        {
+          Record fail;
+          return fail;
+        }
+    }
+  return temp;
 }
 
 void * DuplicateRemoval :: thread_starter(void *context)
@@ -160,6 +286,7 @@ void * DuplicateRemoval :: WorkerThread(void) {
   Pipe& inPipe = *in;
   Pipe& outPipe = *out;
 
+  clog << runLength << endl;
   Pipe sortedOutput(runLength);
 
   BigQ sorter(inPipe, sortedOutput, compare, runLength);
