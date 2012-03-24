@@ -31,7 +31,7 @@ public:
 
 	// this sets up the pipeline; the parameter is the number of
 	// records to buffer
-	Pipe (int bufferSize);	
+	Pipe (int bufferSize);
 	virtual ~Pipe();
 
 	// This inserts a record into the pipeline; note that if the
@@ -48,10 +48,14 @@ public:
 	// and a zero if there are no more records in the pipeline
 	int Remove (Record *removeMe);
 
-	// shut down the pipepine; used by the *producer* to signal that 
+	// shut down the pipepine; used by the *producer* to signal that
 	// there is no more data that is going to be added into the pipe
 	void ShutDown ();
 
+        bool Done()
+        {
+          return (done == 1);
+        }
 };
 
 #endif
