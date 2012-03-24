@@ -156,10 +156,10 @@ void * Join :: WorkerThread(void) {
     Record RightRecord;
     unsigned int counter = 0;
     clog << "getting first records" << endl;
-    outPipeL.Remove(&LeftRecord);
+    outPipeL.Remove(&LeftRecord); // TODO check return value
     counter++;
     clog << "left record" << endl;
-    outPipeR.Remove(&RightRecord);
+    outPipeR.Remove(&RightRecord); // TODO check return value
     counter++;
     clog << "right record" << endl;
 

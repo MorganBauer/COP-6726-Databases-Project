@@ -29,7 +29,7 @@ Record & Record :: operator = (Record const & r)
     {
       delete [] bits;
       bits = NULL;
-      if(NULL != r.bits)
+      if(NULL != r.bits) // check for null assignment.
         {
           bits = new (std::nothrow) char[((int *) r.bits)[0]]; // otherwise, allocate our storage
           memcpy (bits, r.bits, ((int *) r.bits)[0]); // and make a copy
