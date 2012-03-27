@@ -103,6 +103,90 @@ void * Sum :: WorkerThread(void) {
   pthread_exit(NULL); // make our worker thread go away
 }
 
+void * GroupBy :: thread_starter(void *context)
+{
+  clog << "starting GroupBy thread" << endl;
+  return reinterpret_cast<GroupBy*>(context)->WorkerThread();
+}
+
+void * GroupBy :: WorkerThread(void) {
+  cout << "GroupBy thread started" << endl;
+  Pipe &inPipe = *in;
+  Pipe &outPipe = *out;
+  OrderMaker & compare = *comp;
+  Function &computeMe = *fn;
+  unsigned int counter = 0;
+  clog << runLength << endl;
+  Pipe sortedOutput(runLength);
+  BigQ sorter(inPipe, sortedOutput, compare, runLength);
+  clog << "GB BigQ initialized" << endl;
+
+  // sort everything, do what dupremoval does, but sum over the group rather than deleting it.
+  Record recs[2];
+
+  Type retType;
+  int intresult = 0;
+  double doubleresult = 0.0;
+
+  if(SUCCESS == sortedOutput.Remove(&recs[1]))
+    {
+      int tr;
+      double td;
+      retType = computeMe.Apply(recs[1],tr,td);
+      intresult += tr;
+      doubleresult += td;
+
+      counter++;
+    }
+  clog << "first removed" << endl;
+  unsigned int i = 0;
+  ComparisonEngine ceng;
+
+  while(SUCCESS == sortedOutput.Remove(&recs[i%2])) // i%2 is 'current' record
+    {
+      counter++;
+      if (likely(0 == ceng.Compare(&recs[i%2],&recs[(i+1)%2],&compare))) // groups are the same
+        { // add to current sum
+          int tr;
+          double td;
+          retType = computeMe.Apply(recs[i%2],tr,td);
+          intresult += tr;
+          doubleresult += td;
+        }
+      else // groups are different, thus there is a new group
+        {
+          {
+            Record ret;
+            stringstream ss;
+            Attribute attr;
+            attr.name = "SUM";
+            if (Int == retType)
+              {
+                attr.myType = Int;
+                ss << intresult;
+                ss << "|";
+              }
+            else if (Double == retType) // floating point result
+              {
+                attr.myType = Double;
+                ss << doubleresult;
+                ss << "|";
+              }
+            Schema retSchema ("out_schema",1,&attr);
+            ret.ComposeRecord(&retSchema, ss.str().c_str());
+            outPipe.Insert(&ret);
+          }
+          // reset group total
+          intresult = 0;
+          doubleresult = 0.0;
+          i++; // switch slots.
+        }
+    }
+
+  outPipe.ShutDown();
+  clog << "GroupBy ending, after seeing " << counter << " records, in " << i << "groups." << endl;
+  pthread_exit(NULL); // make our worker thread go away
+}
 
 void * Project :: thread_starter(void *context)
 {
@@ -137,6 +221,9 @@ void * Join :: WorkerThread(void) {
   Pipe& inPipeR = *inR;
   Pipe& outPipe = *out;
   CNF& selOp = *cnf;
+  unsigned int counterL = 0;
+  unsigned int counterR = 0;
+  unsigned int counterOut = 0;
   OrderMaker sortOrderL;
   OrderMaker sortOrderR;
   bool validOrderMaker = (0 < selOp.GetSortOrders(sortOrderL, sortOrderR));
@@ -157,15 +244,15 @@ void * Join :: WorkerThread(void) {
     unsigned int counter = 0;
     clog << "getting first records" << endl;
     outPipeL.Remove(&LeftRecord); // TODO check return value
-    counter++;
+    counter++; counterL++;
     clog << "left record" << endl;
     outPipeR.Remove(&RightRecord); // TODO check return value
-    counter++;
+    counter++; counterR++;
     clog << "right record" << endl;
 
-    int LeftNumAtts = LeftRecord.GetNumAtts();
-    int RightNumAtts = RightRecord.GetNumAtts();
-    int NumAttsTotal = LeftNumAtts + RightNumAtts;
+    const int LeftNumAtts = LeftRecord.GetNumAtts();
+    const int RightNumAtts = RightRecord.GetNumAtts();
+    const int NumAttsTotal = LeftNumAtts + RightNumAtts;
 
     int * attsToKeep = (int *)alloca(sizeof(int) * NumAttsTotal);
     clog << "setup atts" << endl;
@@ -194,10 +281,11 @@ void * Join :: WorkerThread(void) {
         { // pos, left is greater than right.
           // left is greater, right is lesser
           // advance right until 0.
+          clog << "L gt R, adv R" << endl;
           do
             {
               // clog << "discard right" << endl;
-              counter++;
+              counter++; counterR++;
               if(FAILURE == outPipeR.Remove(&RightRecord))
                 { Record empty; RightRecord.Consume(&empty); break; }
             }
@@ -205,12 +293,13 @@ void * Join :: WorkerThread(void) {
         }
       if(0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
         {
+          clog << "R gt L, adv L" << endl;
           // right is greater, left is lesser.
           // advance left until equal
           do
             {
               // clog << "discard left" << endl;
-              counter++;
+              counter++; counterL++;
               if(FAILURE == outPipeL.Remove(&LeftRecord))
                 { Record empty; RightRecord.Consume(&empty); break; }
             }
@@ -227,8 +316,8 @@ void * Join :: WorkerThread(void) {
           RightBuffer.push_back(RightRecord);
           LeftRecord  = FillBuffer( LeftBuffer, outPipeL, sortOrderL);
           RightRecord = FillBuffer(RightBuffer, outPipeR, sortOrderR);
-          // counter += LeftBuffer.size();
-          // counter += RightBuffer.size();
+          counterL += LeftBuffer.size();
+          counterR += RightBuffer.size();
           // merge buffers of records.
           for(vector<Record>::iterator itL = LeftBuffer.begin(); itL != LeftBuffer.end(); ++itL)
             {
@@ -240,16 +329,18 @@ void * Join :: WorkerThread(void) {
                   MergedRecord.MergeRecords(left,right,LeftNumAtts,RightNumAtts,attsToKeep,NumAttsTotal,LeftNumAtts);
                   // void MergeRecords (Record *left, Record *right, int numAttsLeft,
                   //                    int numAttsRight, int *attsToKeep, int numAttsToKeep, int startOfRight);
+                  counterOut++;
                   outPipe.Insert(&MergedRecord);
                 }
             }
-          // empty buffers
-          LeftBuffer.clear();
-          RightBuffer.clear();
         }
+      // the checking of the pipe is probably superfluous, and I only probably need to check the records
     } while (!outPipeL.Done() || !outPipeR.Done() || !LeftRecord.isNull() || !RightRecord.isNull()); // there is something in either pipes
   }
-  clog << "at the end" << endl;
+  clog << "Join" << endl
+       << "read " << counterL << " records from the left"  << endl
+       << "read " << counterR << " records from the right" << endl
+       << "put  " << counterOut << " records out" << endl;
   outPipe.ShutDown();
   pthread_exit(NULL); // make our worker thread go away
 }
@@ -286,13 +377,11 @@ void * DuplicateRemoval :: WorkerThread(void) {
   Pipe& inPipe = *in;
   Pipe& outPipe = *out;
 
-  clog << runLength << endl;
   Pipe sortedOutput(runLength);
-
   BigQ sorter(inPipe, sortedOutput, compare, runLength);
   clog << "BigQ initialized" << endl;
   Record recs[2];
-  unsigned counter = 0;
+  unsigned int counter = 0;
 
   if(SUCCESS == sortedOutput.Remove(&recs[1]))
     {

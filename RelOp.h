@@ -149,12 +149,28 @@ class Sum : public RelationalOp {
 };
 
 class GroupBy : public RelationalOp {
+  Pipe * in;
+  Pipe * out;
+  OrderMaker * comp;
+  Function * fn;
+
   pthread_t GroupByThread;
   static void *thread_starter(void *context);
   void * WorkerThread(void);
 	public:
-	void Run (Pipe &inPipe, Pipe &outPipe, OrderMaker &groupAtts, Function &computeMe) { }
-	void WaitUntilDone () { }
+	void Run (Pipe &inPipe, Pipe &outPipe, OrderMaker &groupAtts, Function &computeMe) {
+          in = &inPipe;
+          out = &outPipe;
+          comp = &groupAtts;
+          fn = &computeMe;
+          clog << "GB pthread create" << endl;
+          pthread_create (&GroupByThread, NULL, &GroupBy::thread_starter, this);
+        }
+	void WaitUntilDone () {
+          clog << "GB waiting" << endl;
+          pthread_join (GroupByThread, NULL);
+          clog << "GB complete, joined" << endl;
+        }
 };
 
 class WriteOut : public RelationalOp {
