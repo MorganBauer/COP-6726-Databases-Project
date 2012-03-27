@@ -12,7 +12,7 @@
 
 using namespace std;
 
-// test settings file should have the 
+// test settings file should have the
 // catalog_path, dbfile_dir and tpch_dir information in separate lines
 static const char * const settings = "test.cat";
 
@@ -44,7 +44,7 @@ class relation {
 private:
 	char *rname;
 	char *prefix;
-	char rpath[100]; 
+	char rpath[100];
 	Schema *rschema;
 public:
 	relation (char *_name, Schema *_schema, char *_prefix) :
@@ -106,6 +106,19 @@ public:
 	}
 
 
+        void get_sort_order (char *input, OrderMaker &sortorder) {
+                init_lexical_parser (input);
+  		if (yyparse() != 0) {
+			cout << " Error: can't parse your CNF \n";
+			exit (1);
+		}
+		Record literal;
+		CNF sort_pred;
+		sort_pred.GrowFromParseTree (final, schema (), literal); // constructs CNF predicate
+		OrderMaker dummy;
+		sort_pred.GetSortOrders (sortorder, dummy);
+	}
+
 	void get_sort_order (OrderMaker &sortorder) {
 		cout << "\n specify sort ordering (when done press ctrl-D):\n\t ";
   		if (yyparse() != 0) {
@@ -152,14 +165,14 @@ void get_cnf (char *input, Schema *left, Function &fn_pred) {
 
 relation *rel;
 
-char *supplier = "supplier"; 
-char *partsupp = "partsupp"; 
-char *part = "part"; 
-char *nation = "nation"; 
-char *customer = "customer"; 
-char *orders = "orders"; 
-char *region = "region"; 
-char *lineitem = "lineitem"; 
+char *supplier = "supplier";
+char *partsupp = "partsupp";
+char *part = "part";
+char *nation = "nation";
+char *customer = "customer";
+char *orders = "orders";
+char *region = "region";
+char *lineitem = "lineitem";
 
 relation *s, *p, *ps, *n, *li, *r, *o, *c;
 
