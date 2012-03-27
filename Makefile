@@ -1,6 +1,6 @@
 CC = ccache g++ -O0 -ggdb3 -std=gnu++0x -fopenmp -Wall -Wextra -Wshadow -Wno-write-strings -Wno-deprecated -Weffc++ -pedantic-errors
 # ccache
-# -D_GLIBCXX_PARALLEL -march=native
+# -D_GLIBCXX_PARALLEL -march=native -msse2 -ffast-math
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
 tag = -i
 
@@ -89,12 +89,12 @@ TwoWayList.o : TwoWayList.cc TwoWayList.h
 
 y.tab.o: Parser.y
 	yacc -d Parser.y
-	#sed $(tag) y.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/" 
+	#sed $(tag) y.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/"
 	g++ -c y.tab.c
 
 yyfunc.tab.o: ParserFunc.y
 	yacc -p "yyfunc" -b "yyfunc" -d ParserFunc.y
-	#sed $(tag) yyfunc.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/" 
+	#sed $(tag) yyfunc.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/"
 	g++ -c yyfunc.tab.c
 
 
@@ -106,7 +106,7 @@ lex.yyfunc.o: LexerFunc.l
 	lex -Pyyfunc LexerFunc.l
 	gcc  -c lex.yyfunc.c
 
-clean: 
+clean:
 	rm -f a1test
 	rm -f a2-1test
 	rm -f a2-2test
