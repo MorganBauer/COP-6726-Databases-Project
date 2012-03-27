@@ -30,11 +30,11 @@ void * SelectFile :: WorkerThread(void) {
   while (SUCCESS == inFile.GetNext (temp, selOp, literal)) {
     counter += 1;
     if (counter % 10000 == 0) {
-      cout << counter << "\n";
+      clog << counter/10000 << " ";
     }
     outPipe.Insert(&temp);
   }
-  cout << " selected " << counter << " recs \n";
+  cout << endl << " selected " << counter << " recs \n";
 
   outPipe.ShutDown();
   clog << "select file ending, after selecting " << counter << " records" << endl;
@@ -115,7 +115,6 @@ void * GroupBy :: WorkerThread(void) {
   Pipe &outPipe = *out;
   OrderMaker & compare = *comp;
   Function &computeMe = *fn;
-  unsigned int counter = 0;
   clog << runLength << endl;
   Pipe sortedOutput(runLength);
   BigQ sorter(inPipe, sortedOutput, compare, runLength);
@@ -127,15 +126,13 @@ void * GroupBy :: WorkerThread(void) {
   Type retType;
   int intresult = 0;
   double doubleresult = 0.0;
+  unsigned int counter = 0;
 
   if(SUCCESS == sortedOutput.Remove(&recs[1]))
     {
-      int tr;
-      double td;
+      int tr; double td;
       retType = computeMe.Apply(recs[1],tr,td);
-      intresult += tr;
-      doubleresult += td;
-
+      intresult += tr; doubleresult += td;
       counter++;
     }
   clog << "first removed" << endl;
@@ -145,47 +142,50 @@ void * GroupBy :: WorkerThread(void) {
   while(SUCCESS == sortedOutput.Remove(&recs[i%2])) // i%2 is 'current' record
     {
       counter++;
-      if (likely(0 == ceng.Compare(&recs[i%2],&recs[(i+1)%2],&compare))) // groups are the same
+      if (0 == ceng.Compare(&recs[i%2],&recs[(i+1)%2],&compare)) // groups are the same
         { // add to current sum
-          int tr;
-          double td;
+          int tr; double td;
           retType = computeMe.Apply(recs[i%2],tr,td);
-          intresult += tr;
-          doubleresult += td;
+          intresult += tr; doubleresult += td;
         }
       else // groups are different, thus there is a new group
         {
-          {
-            Record ret;
-            stringstream ss;
-            Attribute attr;
-            attr.name = "SUM";
-            if (Int == retType)
-              {
-                attr.myType = Int;
-                ss << intresult;
-                ss << "|";
-              }
-            else if (Double == retType) // floating point result
-              {
-                attr.myType = Double;
-                ss << doubleresult;
-                ss << "|";
-              }
-            Schema retSchema ("out_schema",1,&attr);
-            ret.ComposeRecord(&retSchema, ss.str().c_str());
-            outPipe.Insert(&ret);
-          }
-          // reset group total
-          intresult = 0;
-          doubleresult = 0.0;
+          WriteRecordOut(retType, intresult, doubleresult);
           i++; // switch slots.
         }
     }
+  WriteRecordOut(retType, intresult, doubleresult);
+  i++;
 
   outPipe.ShutDown();
   clog << "GroupBy ending, after seeing " << counter << " records, in " << i << "groups." << endl;
   pthread_exit(NULL); // make our worker thread go away
+}
+
+void GroupBy :: WriteRecordOut(Type const retType, int & intresult, double & doubleresult) {
+  {
+    Record ret;
+    stringstream ss;
+    Attribute attr;
+    attr.name = "SUM";
+    if (Int == retType)
+      {
+        attr.myType = Int;
+        ss << intresult << "|";
+      }
+    else if (Double == retType) // floating point result
+      {
+        attr.myType = Double;
+        ss << doubleresult << "|";
+      }
+    Schema retSchema ("out_schema",1,&attr);
+    ret.ComposeRecord(&retSchema, ss.str().c_str());
+    Pipe &outPipe = *out;
+    outPipe.Insert(&ret);
+  }
+  // reset group total
+  intresult = 0;
+  doubleresult = 0.0;
 }
 
 void * Project :: thread_starter(void *context)
@@ -274,35 +274,29 @@ void * Join :: WorkerThread(void) {
     // assert(1 == 2);
     ComparisonEngine ceng;
     do {
-      if (0 == counter % 10000)
-        { clog << "loop begin" << counter << " "; }
       // int result = ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR);
       if(0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
         { // pos, left is greater than right.
           // left is greater, right is lesser
           // advance right until 0.
-          clog << "L gt R, adv R" << endl;
-          do
-            {
-              // clog << "discard right" << endl;
-              counter++; counterR++;
-              if(FAILURE == outPipeR.Remove(&RightRecord))
-                { Record empty; RightRecord.Consume(&empty); break; }
-            }
+          do {
+            // clog << "discard right" << endl;
+            counter++; counterR++;
+            if(FAILURE == outPipeR.Remove(&RightRecord))
+              { Record empty; RightRecord.Consume(&empty); break; }
+          }
           while (0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR));
         }
       if(0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
         {
-          clog << "R gt L, adv L" << endl;
           // right is greater, left is lesser.
           // advance left until equal
-          do
-            {
-              // clog << "discard left" << endl;
-              counter++; counterL++;
-              if(FAILURE == outPipeL.Remove(&LeftRecord))
-                { Record empty; RightRecord.Consume(&empty); break; }
-            }
+          do {
+            // clog << "discard left" << endl;
+            counter++; counterL++;
+            if(FAILURE == outPipeL.Remove(&LeftRecord))
+              { Record empty; RightRecord.Consume(&empty); break; }
+          }
           while (0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR));
         }
       if (0 == ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))

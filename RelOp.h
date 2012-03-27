@@ -171,6 +171,7 @@ class GroupBy : public RelationalOp {
           pthread_join (GroupByThread, NULL);
           clog << "GB complete, joined" << endl;
         }
+        void WriteRecordOut(Type, int & intresult, double & doubleresult);
 };
 
 class WriteOut : public RelationalOp {
