@@ -54,7 +54,7 @@ public:
 
         bool Done()
         {
-          return (done == 1);
+          return (1 == done);
         }
 };
 
