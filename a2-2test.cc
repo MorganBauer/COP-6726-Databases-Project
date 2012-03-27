@@ -204,7 +204,9 @@ void test5 ()
   OrderMaker o;
   rel->get_sort_order (o);
 
-  int runlen = 1;
+  o.Print();
+
+  int runlen = 100;
   while (runlen < 1) {
     cout << "\t\n specify runlength:\n\t ";
     cin >> runlen;
@@ -222,7 +224,7 @@ void test5 ()
   cout << " input from file : " << tbl_path << endl;
 
   int success = dbfile.Open(rel->path());
-  dbfile.Load(*(rel->schema()), tbl_path);
+  dbfile.Load(*(rel->schema()), tbl_path);          //////// sorted file load
 
   Record rec;
 
@@ -273,7 +275,7 @@ void test6 ()
   Record temp;
   dbfile.Open (rel->path ());
   int counter = 0;
-  while ((temp.SuckNextRecord (rel->schema (), tblfile)))
+  while ((temp.SuckNextRecord (rel->schema (), tblfile)))      //////////// sequential add
     {
       counter++;
       dbfile.Add (temp);

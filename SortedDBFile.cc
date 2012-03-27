@@ -15,7 +15,7 @@
 
 /* Morgan Bauer */
 
-SortedDBFile::SortedDBFile () : currentRWMode(reading), filepath(), f(), curPage(), curPageIndex(0), runLength(0), so(), toBigQ(NULL), fromBigQ(NULL), bq(NULL)
+SortedDBFile::SortedDBFile () : currentRWMode(reading), filepath(), f(), curPage(), curPageIndex(0), runLength(100), so(), toBigQ(NULL), fromBigQ(NULL), bq(NULL)
 {}
 
 int SortedDBFile::Open (char *f_path)

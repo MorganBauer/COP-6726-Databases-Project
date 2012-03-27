@@ -29,12 +29,15 @@ void * BigQ :: WorkerThread(void) {
   // cout << endl << "BIGQ STARTED" << endl;
   char partiallySortedFileTempFileName[] = "/tmp/partiallysortedXXXXXX"; // maybe set this per instance to a random filename
   partiallySortedFile.TempOpen(partiallySortedFileTempFileName);
+  clog << "using tempfile in " << partiallySortedFileTempFileName << endl;
   // FIRST PHASE
+  clog << "sorting with " << runlen << " pages of memory" << endl;
   PhaseOne();
   // in pipe should be dead now.
   // cout << totalRecords << " Records written to file" << endl;
   // SECOND PHASE
   static const int runThreshold = 200;
+  clog << "sorting " <<runCount << " runs with " << runlen << " pages of memory" << endl;
   if (runThreshold >= runCount)
     {
       PhaseTwoLinearScan();
@@ -43,14 +46,17 @@ void * BigQ :: WorkerThread(void) {
     {
       PhaseTwoPriorityQueue();
     }
+  out.ShutDown ();
   clog << endl << "MERGE COMPLETE" << endl;
   // cout << "cleanup" << endl;
   partiallySortedFile.Close();
   // Cleanup
-  remove(partiallySortedFileTempFileName);
+  clog << "deleting tempfile in " << partiallySortedFileTempFileName << endl;
+  int ret = remove(partiallySortedFileTempFileName);
+  if (ret)
+    perror ("The following error occurred");
   // finally shut down the out pipe
   // this lets the consumer thread know that there will not be anything else put into the pipe
-  out.ShutDown ();
   //cout << endl << "BIGQ FINISHED" << endl;
   pthread_exit(NULL); // make our worker thread go away
 }
@@ -217,7 +223,7 @@ void BigQ::PhaseTwoLinearScan(void)
           recordsOut++;
           if (0 == recordsOut % 10000)
             {
-              clog << recordsOut << " ";
+              clog << recordsOut/10000 << " ";
             }
           out.Insert(&tr);
           bool valid = runs[run].getNextRecord(tr);
