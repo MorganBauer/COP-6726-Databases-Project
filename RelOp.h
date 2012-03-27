@@ -14,7 +14,7 @@ class RelationalOp {
 	public:
  RelationalOp() : runLength(100)
   {}
-	// blocks the caller until the particular relational operator
+  	// blocks the caller until the particular relational operator
 	// has run to completion
 	virtual void WaitUntilDone () = 0;
 
@@ -33,15 +33,27 @@ class SelectFile : public RelationalOp {
   pthread_t SelectFileThread;
   static void *thread_starter(void *context);
   void * WorkerThread(void);
+  SelectFile operator=(const SelectFile&);
+  // SelectFile & SelectFile(const SelectFile &);
 	public:
-
+ SelectFile() : inF(0),outP(0),cnf(0),lit(0) {}
 	void Run (DBFile &inFile, Pipe &outPipe, CNF &selOp, Record &literal);
 	void WaitUntilDone ();
 };
 
 class SelectPipe : public RelationalOp {
+  Pipe * in;
+  Pipe * out;
+  CNF * cnf;
+  Record * lit;
 	public:
-	void Run (Pipe &inPipe, Pipe &outPipe, CNF &selOp, Record &literal) { }
+ SelectPipe() : in(0),out(0),cnf(0),lit(0) {}
+	void Run (Pipe &inPipe, Pipe &outPipe, CNF &selOp, Record &literal) {
+          in = &inPipe;
+          out = &outPipe;
+          cnf = &selOp;
+          lit = &literal;
+        }
 	void WaitUntilDone () { }
 };
 
@@ -157,7 +169,9 @@ class GroupBy : public RelationalOp {
   pthread_t GroupByThread;
   static void *thread_starter(void *context);
   void * WorkerThread(void);
+  GroupBy & operator=(const GroupBy&);
 	public:
+ GroupBy() :in(0),out(0),comp(0),fn(0) {}
 	void Run (Pipe &inPipe, Pipe &outPipe, OrderMaker &groupAtts, Function &computeMe) {
           in = &inPipe;
           out = &outPipe;
