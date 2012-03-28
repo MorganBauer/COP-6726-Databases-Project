@@ -3,6 +3,9 @@
 #include "RelOp.h"
 #include <pthread.h>
 #include <omp.h>
+#include "HiResTimer.h"
+
+
 
 Attribute IA = {"int", Int};
 Attribute SA = {"string", String};
@@ -169,7 +172,7 @@ void q3 () {
 
   Schema out_sch ("out_sch", 1, &DA);
   int cnt = clear_pipe (_out, &out_sch, true);
-
+  cout << "output:  9.24623e+07 expected" << endl;
   cout << "\n\n query3 returned " << cnt << " records \n";
 
   dbf_s.Close ();
@@ -342,7 +345,8 @@ void q6 () {
   J.WaitUntilDone ();
   G.WaitUntilDone ();
 
-  Schema sum_sch ("sum_sch", 1, &DA);
+  Attribute sumGroupByAttrs[] = {DA, IA};
+  Schema sum_sch ("sum_sch", 2, sumGroupByAttrs);
   int cnt = clear_pipe (_out, &sum_sch, true);
   cout << " query6 returned sum for " << cnt << " groups (expected 25 groups)\n";
 }
@@ -443,9 +447,9 @@ void q7 () {
   // s = dbf_s
   // p = dbf_p
   // ps = dbf_ps
-  SF_s.Run (dbf_s, _s, cnf_s, lit_s); // 10k recs qualified
-  SF_p.Run (dbf_p, _p, cnf_p, lit_p); // 161 recs qualified
-  SF_ps.Run (dbf_ps, _ps, cnf_ps, lit_ps); // 161 recs qualified
+  SF_s.Run (dbf_s, _s, cnf_s, lit_s);
+  SF_p.Run (dbf_p, _p, cnf_p, lit_p);
+  SF_ps.Run (dbf_ps, _ps, cnf_ps, lit_ps);
 
   Jpps.Run (_p,_ps,JppsP,cnf_p_ps,lit_p_ps);
   Jspps.Run (_s,JppsP,JsppsP,cnf_s_p_ps,lit_s_p_ps);
@@ -453,7 +457,7 @@ void q7 () {
   // W
   WriteOut W;
   string path(dbfile_dir);
-  path += "q8.tmp";
+  path += "q7.tmp";
   const char *fwpath = path.c_str();
   FILE *writefile = fopen (fwpath, "w");
   Schema sum_sch ("sum_sch", 1, &DA);
@@ -489,8 +493,6 @@ void q8 () {
     On __l:
     W (__l)
   */
-  // char *pred_li = "(l_returnflag = \"R\" AND l_discount < 0.04) OR (l_returnflag = \"R\" AND l_shipmode = \"MAIL\")";
-  // char *pred_li = "(l_returnflag = 'R') AND (l_discount < 0.04) OR (l_returnflag = 'R') AND (l_shipmode = \"MAIL\")";
   char *pred_li = "(l_returnflag = 'R') AND (l_discount < 0.04 OR l_shipmode = 'MAIL')";
   init_SF_li (pred_li, 100);
 
@@ -550,14 +552,20 @@ int main (int argc, char *argv[]) {
 
     double start = 0;
     double end = 0;
+
     start = omp_get_wtime();
+
+    HiResTimer hrt;
+    hrt.start();
 
     query ();
 
+    hrt.stop();
+
     end = omp_get_wtime();
     double elapsed = end - start;
-    cout << "elapsed query time is " << elapsed << "seconds" << endl ;
-
+    cout << endl << "elapsed query time is " << elapsed << "seconds" << endl ;
+    hrt.duration();
 
     cleanup ();
     cout << "\n\n";
