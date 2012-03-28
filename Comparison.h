@@ -59,7 +59,8 @@ public:
 	// create an OrderMaker that can be used to sort records
 	// based upon ALL of their attributes
 	OrderMaker(Schema *schema);
-
+        int * GetWhichAtts() {return &whichAtts[0];}
+        int GetNumAtts() {return numAtts;}
 	// print to the screen
 	void Print ();
 };
@@ -74,7 +75,7 @@ class CNF {
 	friend class ComparisonEngine;
 
 	Comparison orList[MAX_ANDS][MAX_ORS];
-	
+
 	int orLens[MAX_ANDS];
 	int numAnds;
 
@@ -94,12 +95,12 @@ public:
         // this takes a parse tree for a CNF and converts it into a 2-D
         // matrix storing the same CNF expression.  This function is applicable
         // specifically to the case where there are two relations involved
-        void GrowFromParseTree (struct AndList *parseTree, Schema *leftSchema, 
+        void GrowFromParseTree (struct AndList *parseTree, Schema *leftSchema,
 		Schema *rightSchema, Record &literal);
 
         // version of the same function, except that it is used in the case of
         // a relational selection over a single relation so only one schema is used
-        void GrowFromParseTree (struct AndList *parseTree, Schema *mySchema, 
+        void GrowFromParseTree (struct AndList *parseTree, Schema *mySchema,
 		Record &literal);
 
 };
