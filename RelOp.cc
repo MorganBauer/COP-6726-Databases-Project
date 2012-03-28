@@ -123,7 +123,7 @@ void * GroupBy :: WorkerThread(void) {
   // sort everything, do what dupremoval does, but sum over the group rather than deleting it.
   Record recs[2];
 
-  Type retType;
+  Type retType = Int;
   int intresult = 0;
   double doubleresult = 0.0;
   unsigned int counter = 0;
@@ -145,16 +145,16 @@ void * GroupBy :: WorkerThread(void) {
       if (0 == ceng.Compare(&recs[i%2],&recs[(i+1)%2],&compare)) // groups are the same
         { // add to current sum
           int tr; double td;
-          retType = computeMe.Apply(recs[i%2],tr,td);
+          computeMe.Apply(recs[i%2],tr,td);
           intresult += tr; doubleresult += td;
         }
       else // groups are different, thus there is a new group
         {
-          WriteRecordOut(retType, intresult, doubleresult);
+          WriteRecordOut(recs[(i+1)%2],retType, intresult, doubleresult);
           i++; // switch slots.
         }
     }
-  WriteRecordOut(retType, intresult, doubleresult);
+  WriteRecordOut(recs[i%2],retType, intresult, doubleresult);
   i++;
 
   outPipe.ShutDown();
@@ -162,7 +162,7 @@ void * GroupBy :: WorkerThread(void) {
   pthread_exit(NULL); // make our worker thread go away
 }
 
-void GroupBy :: WriteRecordOut(Type const retType, int & intresult, double & doubleresult) {
+void GroupBy :: WriteRecordOut(Record & rec, Type const retType, int & intresult, double & doubleresult) {
   {
     Record ret;
     stringstream ss;
@@ -180,8 +180,27 @@ void GroupBy :: WriteRecordOut(Type const retType, int & intresult, double & dou
       }
     Schema retSchema ("out_schema",1,&attr);
     ret.ComposeRecord(&retSchema, ss.str().c_str());
+    // sum as first attribute, group attr as rest
+    int RightNumAtts = comp->GetNumAtts();
+    int numAttsToKeep = 1 + RightNumAtts;
+
+    int * attsToKeep = (int *)alloca(sizeof(int) * numAttsToKeep);
+    { // setup AttsToKeep for MergeRecords
+      int curEl = 0;
+      attsToKeep[0] = 0;
+      curEl++;
+
+      for (int i = 0; i < RightNumAtts; i++)
+        {
+          attsToKeep[curEl] = (comp->GetWhichAtts())[i];
+          curEl++;
+        }
+    }
+    Record newret;
+    newret.MergeRecords(&ret,&rec, 1, rec.GetNumAtts(),
+                     attsToKeep, numAttsToKeep, 1);
     Pipe &outPipe = *out;
-    outPipe.Insert(&ret);
+    outPipe.Insert(&newret);
   }
   // reset group total
   intresult = 0;
@@ -329,7 +348,8 @@ void * Join :: WorkerThread(void) {
             }
         }
       // the checking of the pipe is probably superfluous, and I only probably need to check the records
-    } while (!outPipeL.Done() || !outPipeR.Done() || !LeftRecord.isNull() || !RightRecord.isNull()); // there is something in either pipes
+      // } while (!outPipeL.Done() || !outPipeR.Done() || !LeftRecord.isNull() || !RightRecord.isNull()); // there is something in either pipes
+    } while (!LeftRecord.isNull() || !RightRecord.isNull()); // there is something in either pipes
   }
   clog << "Join" << endl
        << "read " << counterL << " records from the left"  << endl

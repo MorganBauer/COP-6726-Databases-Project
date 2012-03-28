@@ -185,7 +185,7 @@ class GroupBy : public RelationalOp {
           pthread_join (GroupByThread, NULL);
           clog << "GB complete, joined" << endl;
         }
-        void WriteRecordOut(Type, int & intresult, double & doubleresult);
+        void WriteRecordOut(Record &, Type, int & intresult, double & doubleresult);
 };
 
 class WriteOut : public RelationalOp {
@@ -196,6 +196,7 @@ class WriteOut : public RelationalOp {
   static void *thread_starter(void *context);
   void * WorkerThread(void);
 	public:
+ WriteOut() : in(0), out(0), sch(0) {}
 	void Run (Pipe &inPipe, FILE *outFile, Schema &mySchema) {
           in = &inPipe;
           out = outFile;
