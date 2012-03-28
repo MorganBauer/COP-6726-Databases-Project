@@ -1,3 +1,12 @@
+To compile the driver, type
+	make a3.out
+
+To run the driver, type 'test.out' followed by the query # you wish to execute
+	./a3.out [1-8]
+
+
+
+
 From lin 313-11
 vendor_id	: GenuineIntel
 cpu family	: 6
@@ -31,14 +40,14 @@ elapsed query time is 0.0533681seconds
 q5
 elapsed query time is 0.773079seconds
 q8
-elapsed query time is 5.45372seconds 
+elapsed query time is 5.45372seconds
 most was elapsed query time is 8.06493seconds
 
 
 ==============================================================================
 032608-1719
 
-readme 
+readme
 =========
 Previous drivers are not included!
 
@@ -59,28 +68,28 @@ The Queries:
 5. select distinct ps_suppkey from partsupp where ps_supplycost < 100.11;
 6. select sum (ps_supplycost) from supplier, partsupp where s_suppkey = ps_suppkey groupby s_nationkey;
 ------------------
-7: select sum(ps_supplycost) from part, supplier, partsupp 
+7: select sum(ps_supplycost) from part, supplier, partsupp
 	where p_partkey = ps_partkey and s_suppkey = ps_suppkey and s_acctbal > 2500;
 8: select l_orderkey, l_partkey, l_suppkey from lineitem
-	where l_returnflag = 'R' and l_discount < 0.04 or 
+	where l_returnflag = 'R' and l_discount < 0.04 or
 	l_returnflag = 'R' and l_shipmode = 'MAIL';
 
-Note: For queries 7 and 8, i have only provided a possible plan.. If you have time,  
+Note: For queries 7 and 8, i have only provided a possible plan.. If you have time,
 	I encourage you to code up this plan (will be a good experience for your next assignment!)
 
 Using the Driver:
 ==================
 
-1. SETTINGS: 
+1. SETTINGS:
 	The test driver reads the locations of location variables (dbfile_dir, tpch_dir)
-	from the file 'test.cat' 
+	from the file 'test.cat'
 		--The first line describes the catalog location => *catalog_path
 		--The second line tells where to store created dbfiles  => *dbfile_dir
 		--The third line is the location where tpch tables can be found => *tpch_dir
 
-IMPORTANT: All additional files that you create (metadata and other things) 
-should be stored in the location specified by dbfile_dir. Donot hard code 
-specific paths into your files.Always use the dbfile_dir variable to 
+IMPORTANT: All additional files that you create (metadata and other things)
+should be stored in the location specified by dbfile_dir. Donot hard code
+specific paths into your files.Always use the dbfile_dir variable to
 determine the location to store additional files.
 
 2. Next replace the stub files DBFile.h, DBFile.cc, BigQ.h, and BigQ.cc,
@@ -88,8 +97,8 @@ RelOp.h and RelOp.cc   with your own code. If you are using additional
 headers, modify the Makefile to include them as well. Then compile and
 execute the driver and follow the on-screen instructions.
 
-Submission Instructions: 
-========================= 
+Submission Instructions:
+=========================
 
 Same as a2 (Instead of creating directory a2, create directory a3. The turnin
 file should be called a3.tar.gz)
