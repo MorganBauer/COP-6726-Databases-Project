@@ -35,7 +35,7 @@ void Page :: EmptyItOut () {
 		Record temp;
 		if (!GetFirst (&temp))
 			break;
-	}	
+	}
 
 	// reset the page size
 	curSizeInBytes = sizeof (int);
@@ -48,7 +48,7 @@ int Page :: GetFirst (Record *firstOne) {
 	// move to the first record
 	myRecs->MoveToStart ();
 
-	// make sure there is data 
+	// make sure there is data
 	if (!myRecs->RightLength ()) {
 		return 0;
 	}
@@ -80,7 +80,7 @@ int Page :: Append (Record *addMe) {
 	myRecs->Insert(addMe); // put into internal doubly linked list
 	numRecs++;
 
-	return 1;	
+	return 1;
 }
 
 
@@ -93,9 +93,9 @@ void Page :: ToBinary (char *bits) {
 
 	// and copy the records one-by-one
 	myRecs->MoveToStart ();
-	for (int i = 0; i < numRecs; i++) {	
+	for (int i = 0; i < numRecs; i++) {
 		char *b = myRecs->Current(0)->GetBits();
-		
+
 		// copy over the bits of the current record
 		memcpy (curPos, b, ((int *) b)[0]);
 		curPos += ((int *) b)[0];
@@ -184,7 +184,7 @@ void File :: GetPage (Page *putItHere, off_t whichPage) {
 	read (myFilDes, bits, PAGE_SIZE);
 	putItHere->FromBinary (bits);
 	delete [] bits;
-	
+
 }
 
 
@@ -196,7 +196,7 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 	// if we are trying to add past the end of the file, then
 	// zero all of the pages out
 	if (whichPage >= curLength) {
-		
+
 		// do the zeroing
 		for (off_t i = curLength; i < whichPage; i++) {
 			int foo = 0;
@@ -205,7 +205,7 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 		}
 
 		// set the size
-		curLength = whichPage + 1;	
+		curLength = whichPage + 1;
 	}
 
 	// now write the page
@@ -267,7 +267,7 @@ void File :: TempOpen (char *fName) {
 	// figure out the flags for the system open call
 	// actually do the open
         // char * fnm = strdup(fName);
-        myFilDes = mkstemp (fName);
+  myFilDes = mkostemp (fName, S_IRUSR | S_IWUSR);
         // free(fnm);
 #ifdef verbose
 	cout << "Opening file " << fName << " with "<< curLength << " pages.\n";
@@ -299,6 +299,6 @@ int File :: Close () {
 
 	// and return the size
 	return curLength;
-	
+
 }
 
