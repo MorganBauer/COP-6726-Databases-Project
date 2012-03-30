@@ -209,7 +209,16 @@ void File :: AddPage (Page *addMe, off_t whichPage) {
 	}
 
 	// now write the page
-	char * bits = new (std::nothrow) char[PAGE_SIZE];
+        // calling array with default initialization (the parenthesese on the end ())
+        // This initializes the whole page to zero.
+        // why? because the write below writes a whole page of binary,
+        // but the whole page isn't  packed to being full,
+        // so there is some randome gibberish at the end.
+        // Most likely from some other records, if the page object (and thus it's bits)
+        // is being reused.
+        // The overall result is that you can hash the bin files generated,
+        // and they will always be the same.
+	char * bits = new (std::nothrow) char[PAGE_SIZE]();
 	if (bits == NULL)
 	{
 		cout << "ERROR : Not enough memory. EXIT !!!\n";
