@@ -82,17 +82,13 @@ void * Sum :: WorkerThread(void) {
     attr.name = "SUM";
     if (Int == retType)
       {
-        clog << "int result" << endl;
         attr.myType = Int;
-        ss << intresult;
-        ss << "|";
+        ss << intresult << "|";
       }
     else if (Double == retType) // floating point result
       {
-        clog << "double result" << endl;
         attr.myType = Double;
-        ss << doubleresult;
-        ss << "|";
+        ss << doubleresult << "|";
       }
     Schema retSchema ("out_schema",1,&attr);
     ret.ComposeRecord(&retSchema, ss.str().c_str());
@@ -198,7 +194,7 @@ void GroupBy :: WriteRecordOut(Record & rec, Type const retType, int & intresult
     }
     Record newret;
     newret.MergeRecords(&ret,&rec, 1, rec.GetNumAtts(),
-                     attsToKeep, numAttsToKeep, 1);
+                        attsToKeep, numAttsToKeep, 1);
     Pipe &outPipe = *out;
     outPipe.Insert(&newret);
   }
@@ -263,10 +259,8 @@ void * Join :: WorkerThread(void) {
     unsigned int counter = 0;
     clog << "getting first records" << endl;
     outPipeL.Remove(&LeftRecord); // TODO check return value
-    counter++; counterL++;
     clog << "left record" << endl;
     outPipeR.Remove(&RightRecord); // TODO check return value
-    counter++; counterR++;
     clog << "right record" << endl;
 
     const int LeftNumAtts = LeftRecord.GetNumAtts();
@@ -290,65 +284,65 @@ void * Join :: WorkerThread(void) {
         }
     }
     clog << "atts set up" << endl;
-    // assert(1 == 2);
     ComparisonEngine ceng;
     do {
-      // int result = ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR);
-      if(0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
-        { // pos, left is greater than right.
-          // left is greater, right is lesser
-          // advance right until 0.
-          do {
-            // clog << "discard right" << endl;
-            counter++; counterR++;
-            if(FAILURE == outPipeR.Remove(&RightRecord))
-              { Record empty; RightRecord.Consume(&empty); break; }
-          }
-          while (0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR));
-        }
-      if(0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
-        {
-          // right is greater, left is lesser.
-          // advance left until equal
-          do {
-            // clog << "discard left" << endl;
-            counter++; counterL++;
-            if(FAILURE == outPipeL.Remove(&LeftRecord))
-              { Record empty; RightRecord.Consume(&empty); break; }
-          }
-          while (0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR));
-        }
-      if (0 == ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
-        {
-          // records are the same
-          // fill both left/right buffers until they change.
-          // consider using std::async in the future.
-          vector<Record> LeftBuffer;
-          LeftBuffer.push_back(LeftRecord);
-          vector<Record> RightBuffer;
-          RightBuffer.push_back(RightRecord);
-          LeftRecord  = FillBuffer( LeftBuffer, outPipeL, sortOrderL);
-          RightRecord = FillBuffer(RightBuffer, outPipeR, sortOrderR);
-          counterL += LeftBuffer.size();
-          counterR += RightBuffer.size();
-          // merge buffers of records.
-          for(vector<Record>::iterator itL = LeftBuffer.begin(); itL != LeftBuffer.end(); ++itL)
-            {
-              Record * left = &(*(itL));
-              for(vector<Record>::iterator itR = RightBuffer.begin(); itR != RightBuffer.end(); ++itR)
-                {
-                  Record * right = &(*(itR));
-                  Record MergedRecord;
-                  MergedRecord.MergeRecords(left,right,LeftNumAtts,RightNumAtts,attsToKeep,NumAttsTotal,LeftNumAtts);
-                  // void MergeRecords (Record *left, Record *right, int numAttsLeft,
-                  //                    int numAttsRight, int *attsToKeep, int numAttsToKeep, int startOfRight);
-                  counterOut++;
-                  outPipe.Insert(&MergedRecord);
-                }
+      do {
+        if(0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
+          { // pos, left is greater than right.
+            // left is greater, right is lesser
+            // advance right until 0.
+            do {
+              // clog << "discard right" << endl;
+              counter++; counterR++;
+              if(FAILURE == outPipeR.Remove(&RightRecord))
+                { Record empty; RightRecord.Consume(&empty); break; }
             }
-        }
-      // the checking of the pipe is probably superfluous, and I only probably need to check the records
-      // } while (!outPipeL.Done() || !outPipeR.Done() || !LeftRecord.isNull() || !RightRecord.isNull()); // there is something in either pipes
+            while (0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR));
+          }
+        if(0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR))
+          {
+            // right is greater, left is lesser.
+            // advance left until equal
+            do {
+              // clog << "discard left" << endl;
+              counter++; counterL++;
+              if(FAILURE == outPipeL.Remove(&LeftRecord))
+                { Record empty; RightRecord.Consume(&empty); break; }
+            }
+            while (0 < ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR));
+          }
+      } while (0 != ceng.Compare(&LeftRecord,&sortOrderL,&RightRecord,&sortOrderR)); // discard left and right until equal.
+      {
+        // records are the same
+        // fill both left/right buffers until they change.
+        // consider using std::async in the future. or omp, but need to make sure to have enough records to join
+        vector<Record> LeftBuffer;
+        LeftBuffer.reserve(1000);
+        // LeftBuffer.push_back(LeftRecord);
+        vector<Record> RightBuffer;
+        RightBuffer.reserve(1000);
+        // RightBuffer.push_back(RightRecord);
+        // LeftRecord  =
+        FillBuffer( LeftRecord,  LeftBuffer, outPipeL, sortOrderL);
+        // RightRecord =
+        FillBuffer(RightRecord, RightBuffer, outPipeR, sortOrderR);
+        unsigned int lSize = LeftBuffer.size();
+        unsigned int rSize = RightBuffer.size();
+        counterL += lSize;
+        counterR += rSize;
+        counterOut += (lSize * rSize);
+        // merge buffers of records.
+        Record MergedRecord;
+
+        for (unsigned int i = 0; i < lSize; ++i)
+          {
+            for (unsigned int j = 0; j < rSize; ++j)
+              {
+                MergedRecord.MergeRecords(&LeftBuffer[i],&RightBuffer[j],LeftNumAtts,RightNumAtts,attsToKeep,NumAttsTotal,LeftNumAtts);
+                outPipe.Insert(&MergedRecord);
+              }
+          }
+      }
     } while (!LeftRecord.isNull() || !RightRecord.isNull()); // there is something in either pipes
   }
   clog << "Join" << endl
@@ -359,26 +353,25 @@ void * Join :: WorkerThread(void) {
   pthread_exit(NULL); // make our worker thread go away
 }
 
-Record Join :: FillBuffer(vector<Record> &buffer, Pipe & pipe, OrderMaker & sortOrder)
+void Join :: FillBuffer(Record & in, vector<Record> &buffer, Pipe & pipe, OrderMaker & sortOrder)
 {
-  // clog << "filling a buffer" << endl;
   ComparisonEngine ceng;
-  Record temp;
-  if (FAILURE == pipe.Remove(&temp))
+  buffer.push_back(in);
+  if (FAILURE == pipe.Remove(&in))
     {
-      Record fail;
-      return fail;
+      in.SetNull();
+      return;
     }
-  while(0 == ceng.Compare(&buffer[0], &temp, &sortOrder))
+  while(0 == ceng.Compare(&buffer[0], &in, &sortOrder))
     {
-      buffer.push_back(temp);
-      if (FAILURE == pipe.Remove(&temp))
+      buffer.push_back(in);
+      if (FAILURE == pipe.Remove(&in))
         {
-          Record fail;
-          return fail;
+          in.SetNull();
+          return;
         }
     }
-  return temp;
+  return;
 }
 
 void * DuplicateRemoval :: thread_starter(void *context)

@@ -45,6 +45,12 @@ bool Record :: isNull ()
   return false;
 }
 
+void Record :: SetNull ()
+{
+  bits = NULL;
+  return;
+}
+
 Record :: ~Record () {
   if (bits != NULL) {
     delete [] bits;

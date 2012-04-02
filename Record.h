@@ -36,6 +36,7 @@ public:
 	Record (const Record & r);
         Record & operator = (Record const & r);
         bool isNull (); // returns true if null, false if not
+        void SetNull ();
         ~Record();
 
         size_t GetSize (void) const;
