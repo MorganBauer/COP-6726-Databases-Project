@@ -27,7 +27,7 @@ friend class Page;
 
 private:
 	char * bits;
-	char * GetBits ();
+	char * GetBits () const ;
 	void SetBits (char *bits);
 	void CopyBits(char *bits, int b_len);
 
@@ -38,8 +38,9 @@ public:
         bool isNull (); // returns true if null, false if not
         ~Record();
 
+        size_t GetSize (void) const;
         // return the number of attributes in the record
-        int GetNumAtts(void);
+        int GetNumAtts (void);
 
 	// suck the contents of the record fromMe into this; note that after
 	// this call, fromMe will no longer have anything inside of it

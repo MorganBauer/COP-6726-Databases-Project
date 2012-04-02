@@ -84,18 +84,28 @@ class TaggedRecord
   { }
 };
 
-class TaggedRecordCompare : public std::binary_function <TaggedRecord &, TaggedRecord &, bool>
+class TaggedRecordCompare : public std::binary_function <TaggedRecord, TaggedRecord, bool>
 {
  private:
   OrderMaker & so;
+  ComparisonEngine comp;
  public:
- TaggedRecordCompare(OrderMaker _so) :so(_so){}
-  bool operator()(const TaggedRecord & x, const TaggedRecord & y) const { ComparisonEngine comp;
-    bool ret = (comp.Compare(const_cast<Record *>(&(x.r)), const_cast<Record *>(&(y.r)), &so) > 0);
-    return ret; }
+ TaggedRecordCompare(OrderMaker _so) :so(_so), comp() {}
+  bool operator()(const TaggedRecord & x, const TaggedRecord & y) const {
+    return (comp.Compare(&(x.r), &(y.r), &so) > 0); }
 };
 
 class BigQ {
+  class Compare : public std::binary_function <Record, Record, bool>
+    {
+    private:
+      OrderMaker & so;
+      ComparisonEngine comp;
+    public:
+    Compare(OrderMaker _so) :so(_so), comp() {}
+      bool operator()(const Record & x, const Record & y) const {
+        return (comp.Compare(&x, &y, &so) < 0); }
+    };
  private:
   Pipe & in;
   Pipe & out;
@@ -119,16 +129,6 @@ class BigQ {
 
   void PhaseTwoLinearScan(void);
   void PhaseTwoPriorityQueue(void);
-
-  class Compare : public std::binary_function <Record &, Record &, bool>
-    {
-    private:
-      OrderMaker & so;
-    public:
-    Compare(OrderMaker _so) :so(_so){}
-      bool operator()(const Record & x, const Record & y) { ComparisonEngine comp;
-        return  (comp.Compare(const_cast<Record *>(&x), const_cast<Record *>(&y), &so) < 0); }
-    };
 
  public:
   BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);

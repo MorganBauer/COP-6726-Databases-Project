@@ -281,8 +281,13 @@ void Record :: SetBits (char * _bits) {
   this->bits = _bits;
 }
 
-char* Record :: GetBits (void) {
+char* Record :: GetBits (void) const {
   return bits;
+}
+
+size_t Record :: GetSize (void) const
+{
+  return *((int *) bits);
 }
 
 int Record :: GetNumAtts (void)
