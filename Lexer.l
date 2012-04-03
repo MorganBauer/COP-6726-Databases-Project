@@ -2,7 +2,7 @@
  * SECTION 1
  ***********************************************************************/
 /* The code in %{ %} is included as it is in lex.yy.c file
- * it has C global variables, prototypes, and comments 
+ * it has C global variables, prototypes, and comments
  */
 
 
@@ -50,10 +50,10 @@ void close_lexical_parser () { yy_delete_buffer (yylex_buf_state); }
 "=" 			return('=');
 
 -?[0-9]+ 	       {yylval.actualChars = strdup(yytext);
-  			return(Int); 
+  			return(Int);
 		        }
 
--?[0-9]+\.[0-9]*       {yylval.actualChars = strdup(yytext); 
+-?[0-9]+\.[0-9]*       {yylval.actualChars = strdup(yytext);
   			return(Float);
 			}
 
@@ -65,15 +65,15 @@ void close_lexical_parser () { yy_delete_buffer (yylex_buf_state); }
 	 		if (yytext[yyleng - 2] == '\\') {
      				yymore();
    			} else {
-				yylval.actualChars = strdup(yytext + 1);	
+				yylval.actualChars = strdup(yytext + 1);
 				yylval.actualChars[strlen(yylval.actualChars) - 1] = 0;
      				return(String);
    			}
 			}
 
-[A-Za-z][A-Za-z0-9_-]* {yylval.actualChars = strdup(yytext);
+[A-Za-z][\.A-Za-z0-9_-]* {yylval.actualChars = strdup(yytext);
   			return(Name);
-			}     
+			}
 
 \n                	lineno++;
 

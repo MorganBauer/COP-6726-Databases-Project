@@ -1,6 +1,6 @@
-CC = g++ -O3 -g0 -std=gnu++0x -fopenmp -Wall -Wextra -Wshadow -Wno-write-strings -Wno-deprecated -Weffc++ -pedantic-errors -lrt -march=native -msse2 -ffast-math
+CC = g++ -O0 -ggdb3 -std=gnu++0x -fopenmp -Wall -Wextra -Wshadow -Wno-write-strings -Wno-deprecated -Weffc++ -pedantic-errors -lrt
 # ccache
-# -D_GLIBCXX_PARALLEL -march=native -msse2 -ffast-math
+# -D_GLIBCXX_PARALLEL -march=native -msse2 -ffast-math -fomit-frame-pointer
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
 tag = -i
 
@@ -10,13 +10,22 @@ endif
 
 again: clean all
 
-all: a1test a2-1test a22.out a3.out
+all: a1test a2-1test a22.out a3.out a4-1.out
 
-a3.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o RelOp.o Function.o y.tab.o yyfunc.tab.o lex.yy.o lex.yyfunc.o test.o
-	$(CC) -o a3.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o RelOp.o Function.o y.tab.o yyfunc.tab.o lex.yy.o lex.yyfunc.o test.o -lfl -lpthread
+a4-1.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o Statistics.o y.tab.o lex.yy.o test.o
+	$(CC) -o a4-1.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o Statistics.o y.tab.o lex.yy.o test.o -lfl
 
-test.o: test.cc test.h
-	$(CC) -g -c test.cc
+test.o: test.cc
+	$(CC) -c test.cc
+
+Statistics.o: Statistics.cc Statistics.h
+	$(CC) -c Statistics.cc
+
+a3.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o RelOp.o Function.o y.tab.o yyfunc.tab.o lex.yy.o lex.yyfunc.o a3test.o
+	$(CC) -o a3.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o RelOp.o Function.o y.tab.o yyfunc.tab.o lex.yy.o lex.yyfunc.o a3test.o -lfl -lpthread
+
+a3test.o: a3test.cc a3test.h
+	$(CC) -c a3test.cc
 
 a22.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o
 	$(CC) -o a22.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o -lfl -lpthread
