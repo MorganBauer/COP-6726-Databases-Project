@@ -75,11 +75,11 @@ class Project : public RelationalOp {
     numAttsIn = numAttsInput;
     numAttsOut = numAttsOutput;
     clog << "P pthread create" << endl;
-    pthread_create (&ProjectThread, NULL, &Project::thread_starter, this);
+    pthread_create (&ProjectThread, 0, &Project::thread_starter, this);
   }
   void WaitUntilDone () {
     clog << "P waiting til done" << endl;
-    pthread_join (ProjectThread, NULL);
+    pthread_join (ProjectThread, 0);
     clog << "P complete, joined" << endl;
   }
 };
@@ -97,7 +97,7 @@ class Join : public RelationalOp {
   void FillBuffer(Record &, vector<Record> &buffer, Pipe & pipe, OrderMaker & sortOrder);
  public:
   Join () : inL(0), inR(0), out(0), cnf(0), JoinThread() {}
-  void Run (Pipe &inPipeL, Pipe &inPipeR, Pipe &outPipe, CNF &selOp, Record &literal) {
+  void Run (Pipe &inPipeL, Pipe &inPipeR, Pipe &outPipe, CNF &selOp, Record &literal __attribute__ ((unused))) {
     inL = &inPipeL;
     inR = &inPipeR;
     out = &outPipe;

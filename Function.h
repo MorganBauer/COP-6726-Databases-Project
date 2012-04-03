@@ -59,6 +59,6 @@ public:
 	void Print ();
 
 	// applies the function to the given record and returns the result
-	Type Apply (Record &toMe, int &intResult, double &doubleResult);
+	Type Apply (Record &toMe, int &intResult, double &doubleResult) __attribute__ ((hot));
 };
 #endif

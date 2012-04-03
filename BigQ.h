@@ -103,7 +103,7 @@ class BigQ {
       ComparisonEngine comp;
     public:
     Compare(OrderMaker _so) :so(_so), comp() {}
-      bool operator()(const Record & x, const Record & y) const {
+      bool operator()(const Record & x, const Record & y) const __attribute__ ((hot)) {
         return (comp.Compare(&x, &y, &so) < 0); }
     };
  private:

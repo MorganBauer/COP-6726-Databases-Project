@@ -9,6 +9,7 @@ Record :: Record () : bits(NULL)
 
 Record :: Record (const Record & r) : bits(NULL)
 {
+  __builtin_prefetch (r.bits);
   if (r.bits == NULL) // if the other guy isn't allocated
     {
       return; // nothing to do, exit immediately
@@ -137,9 +138,9 @@ int Record :: ComposeRecord (Schema *mySchema, const char *src) {
       // align things to the size of an integer if needed
       if (len % sizeof (int) != 0) {
         int numExtraBytesSpace = sizeof (int) - (len % sizeof (int));
-        for (int i = 0; i < numExtraBytesSpace; ++i)
+        for (int j = 0; j < numExtraBytesSpace; ++j)
           {
-            *((char *) &(recSpace[currentPosInRec+len+i])) = 0;
+            *((char *) &(recSpace[currentPosInRec+len+j])) = 0;
           }
         len += numExtraBytesSpace;
       }
@@ -248,9 +249,9 @@ int Record :: SuckNextRecord (Schema *mySchema, FILE *textFile) {
       // align things to the size of an integer if needed
       if (len % sizeof (int) != 0) {
         int numExtraBytesSpace = sizeof (int) - (len % sizeof (int));
-        for (int i = 0; i < numExtraBytesSpace; ++i)
+        for (int j = 0; j < numExtraBytesSpace; ++j)
           {
-            *((char *) &(recSpace[currentPosInRec+len+i])) = 0;
+            *((char *) &(recSpace[currentPosInRec+len+j])) = 0;
           }
         len += numExtraBytesSpace;
       }
@@ -323,6 +324,7 @@ void Record :: CopyBits(char * _bits, int b_len) {
 
 
 void Record :: Consume (Record *fromMe) {
+  __builtin_prefetch (fromMe->bits);
   delete [] bits;
   bits = fromMe->bits;
   fromMe->bits = NULL;

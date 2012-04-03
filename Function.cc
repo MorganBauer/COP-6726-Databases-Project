@@ -2,8 +2,8 @@
 #include "Function.h"
 #include <iostream>
 #include <stdlib.h>
-Function :: Function () {
-
+Function :: Function () : opList(0), numOps(0), returnsInt(0)
+{
 	opList = new Arithmatic[MAX_DEPTH];
 }
 
@@ -33,7 +33,7 @@ Type Function :: RecursivelyBuild (struct FuncOperator *parseTree, Schema &mySch
 
 	// in this case, we have either a literal value or a variable value, so do a push
 	} else if (parseTree->leftOperator == 0 && parseTree->right == 0) {
-		
+
 		// now, there are two sub-cases.  In the first case, the value is from the
 		// record that we are operating over, so we will find it in the schema
 		if (parseTree->leftOperand->code == NAME) {
@@ -60,19 +60,19 @@ Type Function :: RecursivelyBuild (struct FuncOperator *parseTree, Schema &mySch
 				opList[numOps].myOp = PushInt;
 				opList[numOps].recInput = myNum;
 				opList[numOps].litInput = 0;
-				numOps++;	
+				numOps++;
 				return Int;
-				
+
 			// got a double
 			} else {
 
 				opList[numOps].myOp = PushDouble;
 				opList[numOps].recInput = myNum;
 				opList[numOps].litInput = 0;
-				numOps++;	
+				numOps++;
 				return Double;
 			}
-				
+
 		// in this case, we have a literal value
 		} else if (parseTree->leftOperand->code == INT) {
 
@@ -81,7 +81,7 @@ Type Function :: RecursivelyBuild (struct FuncOperator *parseTree, Schema &mySch
 				opList[numOps].recInput = -1;
 				opList[numOps].litInput = (void *) (new int);
 				*((int *) opList[numOps].litInput) = atoi (parseTree->leftOperand->value);
-				numOps++;	
+				numOps++;
 				return Int;
 
 		} else {
@@ -90,7 +90,7 @@ Type Function :: RecursivelyBuild (struct FuncOperator *parseTree, Schema &mySch
 				opList[numOps].recInput = -1;
 				opList[numOps].litInput = (void *) (new double);
 				*((double *) opList[numOps].litInput) = atof (parseTree->leftOperand->value);
-				numOps++;	
+				numOps++;
 				return Double;
 		}
 
@@ -107,9 +107,9 @@ Type Function :: RecursivelyBuild (struct FuncOperator *parseTree, Schema &mySch
 
 		// the two values to be operated over are sitting on the stack.  So next we
 		// do the operation.  But there are potentially some typing issues.  If both
-		// are integers, then we do an integer operation 
+		// are integers, then we do an integer operation
 		if (myTypeLeft == Int && myTypeRight == Int) {
-			
+
 			// integer operation!  So no casting required
 
 			if (parseTree->code == '+') {
@@ -142,11 +142,11 @@ Type Function :: RecursivelyBuild (struct FuncOperator *parseTree, Schema &mySch
 		// if we got here, then at least one of the two is a double, so
 		// the integer must be cast as appropriate
 		if (myTypeLeft == Int) {
-		
+
 			// the left operand is an ant and needs to be cast
 			opList[numOps].myOp = ToDouble2Down;
-			numOps++;	
-		}	
+			numOps++;
+		}
 
 		if (myTypeRight == Int) {
 
@@ -206,10 +206,10 @@ void Function :: Print () {
 
 Type Function :: Apply (Record &toMe, int &intResult, double &doubleResult) {
 
-	// this is rather simple; we just loop through and apply all of the 
+	// this is rather simple; we just loop through and apply all of the
 	// operations that are specified during the function
 
-	// this is the stack that holds the intermediate results from the 
+	// this is the stack that holds the intermediate results from the
 	// function
 	double stack[MAX_DEPTH];
 	double *lastPos = stack - 1;
@@ -219,13 +219,13 @@ Type Function :: Apply (Record &toMe, int &intResult, double &doubleResult) {
 
 		switch (opList[i].myOp) {
 
-			case PushInt: 
+			case PushInt:
 
-				lastPos++;	
+				lastPos++;
 
 				// see if we need to get the int from the record
 				if (opList[i].recInput >= 0) {
-					int pointer = ((int *) toMe.bits)[opList[i].recInput + 1];	
+					int pointer = ((int *) toMe.bits)[opList[i].recInput + 1];
 					*((int *) lastPos) = *((int *) &(bits[pointer]));
 
 				// or from the literal value
@@ -235,13 +235,13 @@ Type Function :: Apply (Record &toMe, int &intResult, double &doubleResult) {
 
 				break;
 
-			case PushDouble: 
+			case PushDouble:
 
-				lastPos++;	
+				lastPos++;
 
 				// see if we need to get the int from the record
 				if (opList[i].recInput >= 0) {
-					int pointer = ((int *) toMe.bits)[opList[i].recInput + 1];	
+					int pointer = ((int *) toMe.bits)[opList[i].recInput + 1];
 					*((double *) lastPos) = *((double *) &(bits[pointer]));
 
 				// or from the literal value
@@ -328,11 +328,11 @@ Type Function :: Apply (Record &toMe, int &intResult, double &doubleResult) {
 				break;
 
 			default:
-				
+
 				cerr << "Had a function operation I did not recognize!\n";
-				exit (1);	
+				exit (1);
 		}
-				
+
 	}
 
 	// now, we are just about done.  First we have a sanity check to make sure
@@ -353,7 +353,7 @@ Type Function :: Apply (Record &toMe, int &intResult, double &doubleResult) {
 		doubleResult = *((double *) lastPos);
 		return Double;
 	}
-	
+
 }
 
 

@@ -60,7 +60,7 @@ void * Sum :: WorkerThread(void) {
   Function &computeMe = *fn;
   Record temp;
   clog << "begin summing" << endl;
-  Type retType;
+  Type retType = Int;
   unsigned int counter = 0;
   int intresult = 0;
   double doubleresult = 0.0;
