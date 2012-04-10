@@ -1,10 +1,15 @@
 #ifndef STATISTICS_
 #define STATISTICS_
 #include "ParseTree.h"
-
+#include <map>
+#include <string>
+#include <utility>
 
 class Statistics
 {
+ private:
+  std::map<std::string,int> relations;
+  std::map<std::string,std::pair<std::string, int> > relationInformation;
 public:
 	Statistics();
 	Statistics(Statistics &copyMe);	 // Performs deep copy
@@ -14,7 +19,7 @@ public:
 	void AddRel(char *relName, int numTuples);
 	void AddAtt(char *relName, char *attName, int numDistincts);
 	void CopyRel(char *oldName, char *newName);
-	
+
 	void Read(char *fromWhere);
 	void Write(char *fromWhere);
 
