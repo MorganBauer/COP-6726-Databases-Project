@@ -313,14 +313,20 @@ void * Join :: WorkerThread(void) {
             // records are the same
             // fill both left/right buffers until they change.
             // consider using std::async in the future. or omp, but need to make sure to have enough records to join
-            FillBuffer( LeftRecord,  LeftBuffer, outPipeL, sortOrderL);
-            FillBuffer(RightRecord, RightBuffer, outPipeR, sortOrderR);
+            //#pragma omp sections
+            { // The buffer filling could be done in parallel, as long as we have lots of things from each buffer.
+              //#pragma omp section
+              FillBuffer( LeftRecord,  LeftBuffer, outPipeL, sortOrderL);
+              //#pragma omp section
+                FillBuffer(RightRecord, RightBuffer, outPipeR, sortOrderR);
+            }
             unsigned int lSize = LeftBuffer.size();
             unsigned int rSize = RightBuffer.size();
             counterL += lSize;
             counterR += rSize;
             counterOut += (lSize * rSize);
-            // merge buffers of records.
+            // merge buffers of records. This could also be done in parallel, as long as we had lots of records. probably approx 50k
+            // #pragma omp parallel for
             for (unsigned int i = 0; i < lSize; ++i)
               {
                 for (unsigned int j = 0; j < rSize; ++j)
