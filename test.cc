@@ -4,6 +4,7 @@
 #include "Statistics.h"
 #include "ParseTree.h"
 #include <math.h>
+#include <cassert>
 extern "C" struct YY_BUFFER_STATE *yy_scan_string(const char*);
 extern "C" int yyparse(void);
 extern struct AndList *final;
@@ -135,7 +136,6 @@ void q0 (){
   Statistics s;
   char *relName[] = {"supplier","partsupp"};
 
-
   s.AddRel(relName[0],10000);
   s.AddAtt(relName[0], "s_suppkey",10000);
 
@@ -143,7 +143,7 @@ void q0 (){
   s.AddAtt(relName[1], "ps_suppkey", 10000);
   cout << "both s and ps added" << endl;
   char *cnf = "(s_suppkey = ps_suppkey)";
-
+  //
   yy_scan_string(cnf);
   yyparse();
   PrintAndList(final);
@@ -151,30 +151,39 @@ void q0 (){
   PrintParseTree(final);
   cout << endl << "prev was andlist" << endl;
   double result = s.Estimate(final, relName, 2);
-  clog << "after estimate" << endl;
-  if(result!=800000)
-    cout<<"error in estimating Q1 before apply \n ";
+  clog << "after estimate, with estimate of " << result << endl;
+  cout << "estimate should be :             800000" << endl;
+  if (result != 800000.0l)
+    cerr<<"error in estimating Q0 before apply " << endl;
+
   s.Apply(final, relName, 2);
 
   // test write and read
+  clog << "writing stat to file" << endl;
   s.Write(fileName);
+  s.print();
 
   //reload the statistics object from file
   Statistics s1;
+  clog << "reading stat from file" << endl;
   s1.Read(fileName);
+  clog << "printing stat from read" << endl;
+  s1.print();
+  // assert(0);
   cnf = "(s_suppkey>1000)";
   yy_scan_string(cnf);
   yyparse();
   double dummy = s1.Estimate(final, relName, 2);
+  clog << "estimate out was   " << dummy << endl;
+  cout << "estimate should be " << result/3.0 << endl;
   if(fabs(dummy*3.0-result) >0.1)
     {
       cout<<"Read or write or last apply is not correct\n";
     }
-
 }
 
-void q1 (){
-
+void q1 () // pure select
+{
   Statistics s;
   char *relName[] = {"lineitem"};
 
@@ -183,9 +192,13 @@ void q1 (){
   s.AddAtt(relName[0], "l_discount"   ,11);
   s.AddAtt(relName[0], "l_shipmode"   ,7);
 
-
   char *cnf = "(l_returnflag = 'R') AND (l_discount < 0.04 OR l_shipmode = 'MAIL')";
-
+  //      ltuples / distinct(rflag)  *           1/3       +      1 / distinct(rflag)
+  //                6001215/3        * (1-    (1-(1/3))             (1- (1/7)))
+  //              2000405            * (1-      (2/3)                 (6/7))
+  //              2000405            *                 (1- (4/7))
+  //              2000405            *                   (3/7)
+  //                           857316.428571
   yy_scan_string(cnf);
   yyparse();
 
@@ -195,18 +208,15 @@ void q1 (){
   cout << endl << "prev was parsetree" << endl;
 
   double result = s.Estimate(final, relName, 1);
-  cout<<"Your estimation Result  " <<result;
-  cout<<"\n Correct Answer: 8.5732e+5";
+  cout<<"Your estimation Result  " << scientific << result << endl;
+  cout<<" Correct Answer:        8.5732e+5" << endl;
+  cerr << "" << endl;
 
   s.Apply(final, relName, 1);
 
   // test write and read
   s.Write(fileName);
-
-
 }
-
-
 
 void q2 (){
 
@@ -225,6 +235,8 @@ void q2 (){
   s.AddAtt(relName[2], "n_nationkey",25);
 
   char *cnf = "(c_custkey = o_custkey)";
+  //               join
+  //          150k*1.5mil /(150k) = 1.5mil
   yy_scan_string(cnf);
   yyparse();
 
@@ -232,12 +244,15 @@ void q2 (){
   s.Apply(final, relName, 2);
 
   cnf = " (c_nationkey = n_nationkey)";
+  //          join
+  //          1.5mil*25/(25) = 1.5mil
   yy_scan_string(cnf);
   yyparse();
 
   double result = s.Estimate(final, relName, 3);
+
   if(fabs(result-1500000)>0.1)
-    cout<<"error in estimating Q2\n";
+    cout<<"error in estimating Q2" << endl;
   s.Apply(final, relName, 3);
 
   s.Write(fileName);
@@ -454,7 +469,7 @@ void q7(){
 
   s.AddRel(relName[1],6001215);
   s.AddAtt(relName[1], "l_orderkey",1500000);
-
+  s.AddAtt(relName[1], "l_receiptdate",-1); // this was missing
 
   char *cnf = "(l_receiptdate >'1995-02-01' ) AND (l_orderkey = o_orderkey)";
 
@@ -477,7 +492,7 @@ void q8 (){
   Statistics s;
   char *relName[] = { "part",  "partsupp"};
 
-  s.Read(fileName);
+  //  s.Read(fileName);
 
   s.AddRel(relName[0],200000);
   s.AddAtt(relName[0], "p_partkey",200000);
@@ -488,7 +503,11 @@ void q8 (){
 
 
   char *cnf = "(p_partkey=ps_partkey) AND (p_size =3 OR p_size=6 OR p_size =19)";
-
+  // p_size*ps_size / max(p_pk,ps_pk)  *     1/50    +    1/50   +    1/50
+  //     200k*800k/max(200k,200k)      *                  3/50
+  //          160,000k/200k            *                  3/50
+  //               800k                *                  3/50
+  //                                  48k
   yy_scan_string(cnf);
   yyparse();
 
@@ -603,6 +622,11 @@ void q11 (){
   s.AddAtt(relName[1], "l_shipmode",7);
 
   char *cnf = "(l_partkey = p_partkey) AND (l_shipmode = 'AIR' OR l_shipmode = 'AIR REG') AND (p_container ='SM BOX' OR p_container = 'SM PACK')  AND (l_shipinstruct = 'DELIVER IN PERSON')";
+  //            equality join           *          dependent or                            *             dependent or                              *    single equality
+  //             6mil                   *  (1-    (1- (1/7))            (1- (1/7)))        *  (1-   (1-(1/40))               (1-(1/40)))           *     6mil/4
+  //             6mil                   *  (1-    (6/7)                   (6/7))           *  (1-   (39/40)                   (39/40))             *     1500303.75
+  //             6mil                   *  (1-                  36/49)                     *  (1-                   1521/1600)                     *     1500303.75
+  //             6mil                   *                       13/49                      *                          79/1600                      *     1500303.75
 
   yy_scan_string(cnf);
   yyparse();
@@ -614,13 +638,14 @@ void q11 (){
 
   double result = s.Estimate(final, relName,2);
 
+  cout << "estimate of        " << result << endl;
+  cout << "estimate should be 21432.9" << endl;
+
   if(fabs(result-21432.9)>0.5)
-    cout<<"error in estimating Q11\n";
+    cout<<"error in estimating Q11" << endl;
   s.Apply(final, relName,2);
 
   s.Write(fileName);
-
-
 }
 
 int main(int argc, char *argv[]) {
