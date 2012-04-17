@@ -174,8 +174,12 @@ void q0 (){
   yy_scan_string(cnf);
   yyparse();
   double dummy = s1.Estimate(final, relName, 2);
-  clog << "estimate out was   " << dummy << endl;
-  cout << "estimate should be " << result/3.0 << endl;
+
+  clog << "after first estimate, with estimate of " << result << endl;
+  cout << "      first estimate should be :       800000" << endl;
+
+  clog << "second estimate out was   " << dummy << endl;
+  cout << "second estimate should be " << result/3.0 << endl;
   if(fabs(dummy*3.0-result) >0.1)
     {
       cout<<"Read or write or last apply is not correct\n";
@@ -216,6 +220,10 @@ void q1 () // pure select
 
   // test write and read
   s.Write(fileName);
+
+  cout<<"Your estimation Result  " << scientific << result << endl;
+  cout<<" Correct Answer:        8.5732e+5" << endl;
+  cerr << "" << endl;
 }
 
 void q2 (){
@@ -257,6 +265,9 @@ void q2 (){
 
   s.Write(fileName);
 
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        1500000" << endl;
+  cerr << "" << endl;
 
 
 }
@@ -286,18 +297,24 @@ void q3 (){
 
   char *set1[] ={"s","n1"};
   char *cnf = "(s.s_nationkey = n1.n_nationkey)";
+  // pure join
+  // 10k*25/25 = 10k
   yy_scan_string(cnf);
   yyparse();
   s.Apply(final, set1, 2);
 
   char *set2[] ={"c","n2"};
   cnf = "(c.c_nationkey = n2.n_nationkey)";
+  // pure join
+  // 150k*25/25 = 150k
   yy_scan_string(cnf);
   yyparse();
   s.Apply(final, set2, 2);
 
   char *set3[] = {"c","s","n1","n2"};
   cnf = " (n1.n_nationkey = n2.n_nationkey )";
+  // join of the previous two joins
+  // 10k * 150k / 25 = 60mil
   yy_scan_string(cnf);
   yyparse();
 
@@ -308,6 +325,10 @@ void q3 (){
   s.Apply(final, set3, 4);
 
   s.Write(fileName);
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        6e  7 or 60000000" << endl;
+  cerr << "" << endl;
 
 }
 
@@ -343,26 +364,40 @@ void q4 (){
   s.CopyRel("nation","n");
   s.CopyRel("region","r");
 
+
+  char *relName2[] = { "p", "ps", "s", "n", "r"};
+
   char *cnf = "(p.p_partkey=ps.ps_partkey) AND (p.p_size = 2)";
+  //            first       join               equality selection
+  //             200k*800k/200k             *    1/50
+  //                                     800k/50
+  //                                       16k
   yy_scan_string(cnf);
   yyparse();
-  s.Apply(final, relName, 2);
+  s.Apply(final, relName2, 2);
 
   cnf ="(s.s_suppkey = ps.ps_suppkey)";
+  //        join, of already joined
+  //           10k*16k/10k = 16k
   yy_scan_string(cnf);
   yyparse();
-  s.Apply(final, relName, 3);
+  s.Apply(final, relName2, 3);
 
   cnf =" (s.s_nationkey = n.n_nationkey)";
+  //          third join of already joined
+  //          16k* 25/25 = 16k
   yy_scan_string(cnf);
   yyparse();
-  s.Apply(final, relName, 4);
+  s.Apply(final, relName2, 4);
 
   cnf ="(n.n_regionkey = r.r_regionkey) AND (r.r_name = 'AMERICA') ";
+  // fourth join of already joined       and    a selection of particular nation by name
+  //           16k *5/5                  *      1/5
+  //                                3200
   yy_scan_string(cnf);
   yyparse();
 
-  double result = s.Estimate(final, relName, 5);
+  double result = s.Estimate(final, relName2, 5);
   if(fabs(result-3200)>0.1)
     cout<<"error in estimating Q4\n";
 
@@ -371,6 +406,9 @@ void q4 (){
   s.Write(fileName);
 
 
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        3200" << endl;
+  cerr << "" << endl;
 
 
 }
@@ -387,6 +425,7 @@ void q5 (){
   s.AddRel(relName[1],1500000);
   s.AddAtt(relName[1], "o_orderkey",1500000);
   s.AddAtt(relName[1], "o_custkey",150000);
+  s.AddAtt(relName[1], "o_orderdate",-1);
 
   s.AddRel(relName[2],6001215);
   s.AddAtt(relName[2], "l_orderkey",1500000);
@@ -412,6 +451,9 @@ void q5 (){
 
   s.Write(fileName);
 
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        400081" << endl;
+  cerr << "" << endl;
 
 }
 
@@ -419,7 +461,7 @@ void q6 (){
 
   Statistics s;
   char *relName[] = { "partsupp", "supplier", "nation"};
-
+  remove("Statistics.txt");
   s.Read(fileName);
 
   s.AddRel(relName[0],800000);
@@ -452,6 +494,9 @@ void q6 (){
   s.Write(fileName);
 
 
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        32000" << endl;
+  cerr << "" << endl;
 
 }
 
@@ -459,7 +504,7 @@ void q7(){
 
   Statistics s;
   char *relName[] = { "orders", "lineitem"};
-
+  remove("Statistics.txt");
   s.Read(fileName);
 
 
@@ -483,6 +528,9 @@ void q7(){
   s.Apply(final, relName, 2);
   s.Write(fileName);
 
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        2000405" << endl;
+  cerr << "" << endl;
 
 }
 
@@ -521,6 +569,10 @@ void q8 (){
 
   s.Write(fileName);
 
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        48000" << endl;
+  cerr << "" << endl;
+
 }
 void q9(){
 
@@ -556,6 +608,9 @@ void q9(){
 
   s.Write(fileName);
 
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        4" << endl;
+  cerr << "" << endl;
 
 
 }
@@ -564,7 +619,7 @@ void q10 (){
 
   Statistics s;
   char *relName[] = { "customer", "orders", "lineitem","nation"};
-
+  remove(fileName);
   s.Read(fileName);
 
   s.AddRel(relName[0],150000);
@@ -574,6 +629,7 @@ void q10 (){
   s.AddRel(relName[1],1500000);
   s.AddAtt(relName[1], "o_orderkey",1500000);
   s.AddAtt(relName[1], "o_custkey",150000);
+  s.AddAtt(relName[1], "o_orderdate",-1);
 
   s.AddRel(relName[2],6001215);
   s.AddAtt(relName[2], "l_orderkey",1500000);
@@ -582,17 +638,27 @@ void q10 (){
   s.AddAtt(relName[3], "n_nationkey",25);
 
   char *cnf = "(c_custkey = o_custkey)  AND (o_orderdate > '1994-01-23') ";
+  //                    join                     inequality select
+  //             150k*1.5mil/150k        *      1/3
+  //                 1.5 mil             *   1/3
+  //                            500k
   yy_scan_string(cnf);
   yyparse();
   s.Apply(final, relName, 2);
 
   cnf = " (l_orderkey = o_orderkey) ";
-  yy_scan_string(cnf);                                                                                  yyparse();
+  //         join of already joined
+  //          6mil * 500k / 1.5mil = 2mil
+  //             2000405
+  yy_scan_string(cnf); yyparse();
 
   s.Apply(final, relName, 3);
 
   cnf = "(c_nationkey = n_nationkey) ";
-  yy_scan_string(cnf);                                                                                  yyparse();
+  //         join of already joined
+  //          2000405*25/25
+  //             2000405
+  yy_scan_string(cnf); yyparse();
 
   double result = s.Estimate(final, relName, 4);
   if(fabs(result-2000405)>0.1)
@@ -602,6 +668,9 @@ void q10 (){
 
   s.Write(fileName);
 
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        2000405" << endl;
+  cerr << "" << endl;
 
 }
 
@@ -646,6 +715,9 @@ void q11 (){
   s.Apply(final, relName,2);
 
   s.Write(fileName);
+
+  cout << "estimate of        " << result << endl;
+  cout << "estimate should be 21432.9" << endl;
 }
 
 int main(int argc, char *argv[]) {

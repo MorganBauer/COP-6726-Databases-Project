@@ -1,7 +1,27 @@
+I now have all estimates working. In the non-late project, only q10 was broken.
+
+q0  works
+q1  works
+q2  works
+q3  works
+q4  works
+q5  works
+q6  works
+q7  works
+q8  works
+q9  works
+q10 works
+q11 works
+
+
+
+
+
+
 ==============================================================================
 032608-1719
 
-readme 
+readme
 =========
 Previous drivers are not included!
 
@@ -16,15 +36,15 @@ To run the driver, type 'test.out' followed by the query # you wish to execute
 
 Using the Driver:
 ==================
-I modify Lexer.l, please use this new version. 
+I modify Lexer.l, please use this new version.
 
 For those who use Solaris machines, do not delete included lex.yy.c, otherwise, there may have
 link error.
 
 
 
-Submission Instructions: 
-========================= 
+Submission Instructions:
+=========================
 
  Create directory a4-1. The turnin file should be called a4-1.tar.gz)
 The executable produced by your file should be called a4-1.out

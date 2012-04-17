@@ -86,8 +86,19 @@ void Statistics::CopyRel(char *oldName, char *newName)
 {
   std::string oldN(oldName);
   std::string newN(newName);
-  rels[newN] = rels[oldN];
-  extantAttrs[newN] = extantAttrs[oldN];
+  std::map < std::string, tupleCount > const oldAttrs = rels[oldN].GetAtts();
+
+  RelationInformation newR(rels[oldN].NumTuples());
+
+  std::map < std::string, tupleCount >::const_iterator it;
+  for (it = oldAttrs.begin(); it != oldAttrs.end(); it++ )
+    {
+      newR.AddAtt((newN+"."+(*it).first), (*it).second); // add modified attr to new relation
+      extantAttrs[(newN+"."+(*it).first)] = newN; // know where these modified attrs are
+    }
+
+  rels[newN] = newR; // put new relation in
+  newR.print();
 }
 
 void Statistics::Read(char *fromWhere)
@@ -95,6 +106,11 @@ void Statistics::Read(char *fromWhere)
   clog << endl;
   using std::ifstream;
   ifstream statFile(fromWhere);
+
+  if (!statFile.good())
+    {
+      return;
+    }
 
   unsigned iters;
   statFile >> iters;
@@ -227,32 +243,48 @@ void Statistics::Apply(struct AndList *parseTree, char *relNames[], int numToJoi
           newRelation += rel;
         }
       clog << "new relation is " << newRelation << endl;
-    }
-  for (unsigned i = 0; i < numToJoin; i++)
-    {
-      string rel(relNames[i]);
-    }
-  // new map, to have both relations merged into it.
-  RelationInformation merged(estimate); // new relation with estimated
+      // new map, to have both relations merged into it.
+      RelationInformation merged(estimate); // new relation with estimated
 
-  for (int i = 0; i < numToJoin ; i++)
-    {
-      merged.CopyAtts(rels[relNames[i]]);
-    }
-  merged.print();
-  rels[newRelation] = merged;
-  for (int i = 0; i < numToJoin ; i++) // get rid of information about old relations
-    {
-      rels.erase(relNames[i]);
-      mergedRelations[relNames[i]] = newRelation;
-    }
-  std::map<std::string, tupleCount> mergedAtts = merged.GetAtts();
+      for (int i = 0; i < numToJoin ; i++)
+        {
+          merged.CopyAtts(rels[relNames[i]]);
+        }
+      clog << "printing merged relations " << endl << endl;
+      merged.print();
+      rels[newRelation] = merged;
 
-  std::map < std::string, tupleCount>::const_iterator it;
-  for (it = mergedAtts.begin(); it != mergedAtts.end(); it++ )
-    {
-      extantAttrs[(*it).first] = newRelation;
+      { // get rid of information about old relations
+      std::vector<std::string> attrsInParseTree  = CheckParseTree(parseTree);
+      // create a set of old relations to steal attributes from.
+      std::set<string> oldRels;
+      for(vector<string>::iterator it = attrsInParseTree.begin(); it < attrsInParseTree.end(); ++it)
+        {
+          oldRels.insert(extantAttrs[(*it)]);
+        }
+
+      for(std::set<string>::const_iterator it = oldRels.begin(); it != oldRels.end(); ++it)
+        {
+          merged.CopyAtts(rels[*it]);
+          rels.erase((*it));
+        }
+      for (int i = 0; i < numToJoin ; i++)
+        {
+          rels.erase(relNames[i]); //
+          mergedRelations[relNames[i]] = newRelation;
+        }
+      }
+
+      std::map<std::string, tupleCount> mergedAtts = merged.GetAtts();
+
+      std::map < std::string, tupleCount>::const_iterator it;
+      for (it = mergedAtts.begin(); it != mergedAtts.end(); it++ )
+        {
+          extantAttrs[(*it).first] = newRelation;
+          clog << (*it).first << "now belongs to " << newRelation << endl;
+        }
     }
+
 
   // Second, the relations in relNames must contain exactly the set of
   // relations in one or more of the current partitions in the Statistics
@@ -279,7 +311,7 @@ void Statistics::Apply(struct AndList *parseTree, char *relNames[], int numToJoi
   // Finally, note that you will never be asked to write or to read from disk
   // a Statistics object for which Apply has been called. That is, you will
   // always write or read an object having only singleton relations.
-
+  clog << endl << endl << "****************" << estimate << "******************" << endl << endl;
 }
 
 double Statistics::Estimate(struct AndList *parseTree, char **relNames, int numToJoin)
