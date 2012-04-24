@@ -45,11 +45,11 @@ a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o Generi
 a1test.o: a1test.cc a1test.h
 	$(CC)  -c a1test.cc
 
-main:   y.tab.o lex.yy.o main.o
-	$(CC) -o main y.tab.o lex.yy.o main.o -lfl
+main: Record.o Comparison.o ComparisonEngine.o Schema.o File.o y.tab.o lex.yy.o main.o
+	$(CC) -o main Record.o Comparison.o ComparisonEngine.o Schema.o File.o y.tab.o lex.yy.o main.o -lfl
 
-main.o : main.cc
-	$(CC) -g -c main.cc
+main.o: main.cc
+	$(CC)  -c main.cc
 
 Comparison.o: Comparison.cc Comparison.h
 	$(CC)  -c Comparison.cc
@@ -98,7 +98,7 @@ TwoWayList.o : TwoWayList.cc TwoWayList.h
 
 y.tab.o: Parser.y
 	yacc -d Parser.y
-	sed $(tag) y.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/"
+	#sed $(tag) y.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/"
 	g++ -c y.tab.c
 
 yyfunc.tab.o: ParserFunc.y

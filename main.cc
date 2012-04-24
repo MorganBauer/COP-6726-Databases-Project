@@ -1,27 +1,60 @@
 
 #include <iostream>
-#include "ParseTree.h"
-
+#include "Record.h"
+#include <stdlib.h>
 using namespace std;
 
 extern "C" {
 	int yyparse(void);   // defined in y.tab.c
 }
 
+extern struct AndList *final;
+
 int main () {
 
+	// try to parse the CNF
+	cout << "Enter in your CNF: ";
+  	if (yyparse() != 0) {
+		cout << "Can't parse your CNF.\n";
+		exit (1);
+	}
 
+	// suck up the schema from the file
+	Schema lineitem ("catalog", "lineitem");
 
-	yyparse();
+	// grow the CNF expression from the parse tree 
+	CNF myComparison;
+	Record literal;
+	myComparison.GrowFromParseTree (final, &lineitem, literal);
+	
+	// print out the comparison to the screen
+	myComparison.Print ();
 
-// these data structures hold the result of the parsing
-struct FuncOperator *finalFunction;
-struct TableList *tables;
-struct AndList *boolean;
-struct NameList *groupingAtts;
-struct NameList *attsToSelect;
-int distinctAtts;
-int distinctFunc;
+	// now open up the text file and start procesing it
+        FILE *tableFile = fopen ("/cise/homes/mhb/dbi/origFile/lineitem.tbl", "r");
+
+        Record temp;
+        Schema mySchema ("catalog", "lineitem");
+
+	//char *bits = literal.GetBits ();
+	//cout << " numbytes in rec " << ((int *) bits)[0] << endl;
+	//literal.Print (&supplier);
+
+        // read in all of the records from the text file and see if they match
+	// the CNF expression that was typed in
+	int counter = 0;
+	ComparisonEngine comp;
+        while (temp.SuckNextRecord (&mySchema, tableFile) == 1) {
+		counter++;
+		if (counter % 10000 == 0) {
+			cerr << counter << "\n";
+		}
+
+		if (comp.Compare (&temp, &literal, &myComparison))
+                	temp.Print (&mySchema);
+
+        }
+
 }
 
 

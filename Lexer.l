@@ -2,7 +2,7 @@
  * SECTION 1
  ***********************************************************************/
 /* The code in %{ %} is included as it is in lex.yy.c file
- * it has C global variables, prototypes, and comments 
+ * it has C global variables, prototypes, and comments
  */
 
 
@@ -15,6 +15,10 @@
 
 int lineno = 1;
 void yyerror(char*s);
+
+static YY_BUFFER_STATE yylex_buf_state;
+void init_lexical_parser (char *src) { yylex_buf_state = yy_scan_string (src); }
+void close_lexical_parser () { yy_delete_buffer (yylex_buf_state); }
 
 %}
 
@@ -35,71 +39,41 @@ void yyerror(char*s);
 
 %%
 
-"SELECT"		return(SELECT);
-
-"FROM"			return(FROM);
-
-"WHERE"			return(WHERE);
-
-"SUM"			return(SUM);
-
-"AND"			return(AND);
-
-"GROUP"			return(GROUP);
-
-"DISTINCT"		return(DISTINCT);
-
-"BY"			return(BY);
-
-"OR"			return(OR);
-
-"AS"			return(AS);
-
 "("			return('(');
-
-"<"                     return('<');
-
-">"                     return('>');
-
-"="                     return('=');
 
 ")"    	        	return(')');
 
-"+"    	        	return('+');
+"<"    		      	return('<');
 
-"-"    	        	return('-');
+">"    		 	return('>');
 
-"/"    	        	return('/');
-
-"*"    	        	return('*');
-
-","    	        	return(',');
+"=" 			return('=');
 
 -?[0-9]+ 	       {yylval.actualChars = strdup(yytext);
-  			return(Int); 
+  			return(Int);
 		        }
 
--?[0-9]+\.[0-9]*       {yylval.actualChars = strdup(yytext); 
+-?[0-9]+\.[0-9]*       {yylval.actualChars = strdup(yytext);
   			return(Float);
 			}
 
-[A-Za-z][A-Za-z0-9_-]* {yylval.actualChars = strdup(yytext);
-  			return(Name);
-			}     
+"OR"      		return(OR);
 
-[A-Za-z][A-Za-z0-9_-]*\.[A-Za-z][A-Za-z0-9_-]* {yylval.actualChars = strdup(yytext);
-  			return(Name);
-			}     
+"AND"			return(AND);
 
-\'[^'\n]*\'            {/* take care of ' in a string */
-                        if (yytext[yyleng - 2] == '\\') {
-                                yymore();
-                        } else {
-                                yylval.actualChars = strdup(yytext + 1);
-                                yylval.actualChars[strlen(yylval.actualChars) - 1] = 0;
-                                return(String);
-                        }
-                        }
+\'[^'\n]*\' 	       {/* take care of ' in a string */
+	 		if (yytext[yyleng - 2] == '\\') {
+     				yymore();
+   			} else {
+				yylval.actualChars = strdup(yytext + 1);
+				yylval.actualChars[strlen(yylval.actualChars) - 1] = 0;
+     				return(String);
+   			}
+			}
+
+[A-Za-z][\.A-Za-z0-9_-]* {yylval.actualChars = strdup(yytext);
+  			return(Name);
+			}
 
 \n                	lineno++;
 
