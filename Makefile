@@ -45,8 +45,8 @@ a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o Generi
 a1test.o: a1test.cc a1test.h
 	$(CC)  -c a1test.cc
 
-main:   y.tab.o lex.yy.o main.o
-	$(CC) -o main y.tab.o lex.yy.o main.o -lfl
+main:   y.tab.o lex.yy.o main.o Statistics.o
+	$(CC) -o main y.tab.o lex.yy.o main.o Statistics.o -lfl
 
 main.o : main.cc
 	$(CC) -g -c main.cc
