@@ -13,12 +13,13 @@ using std::string;
 using std::vector;
 using std::clog; using std::endl;
 
-Statistics::Statistics() : // relations(), relationInformation(),
-  rels(), extantAttrs()
+Statistics::Statistics() :
+  rels(), extantAttrs(), mergedRelations()
 {
 }
 
-Statistics::Statistics(Statistics &copyMe) // : relations(copyMe.relations), relationInformation(copyMe.relationInformation)
+Statistics::Statistics(Statistics &copyMe __attribute__ ((__unused__))) :
+  rels(), extantAttrs(), mergedRelations()
 {
   assert(0);
 }
@@ -74,12 +75,12 @@ void Statistics::AddAtt(char *relName, char *attName, int numDistincts)
     {
       // relationInformation[rel] = make_pair(att, numDistincts);
       rels[rel].AddAtt(att,numDistincts);
-      std::clog << "before set insert with numdistincts given" << std::endl;
-      std::clog << "attempting to insert atter \"" << att << "\"" << std::endl;
+      // std::clog << "before set insert with numdistincts given" << std::endl;
+      // std::clog << "attempting to insert atter \"" << att << "\"" << std::endl;
       extantAttrs.insert(make_pair(att,rel));
-      std::clog << "after set insert with numdistincts given" << std::endl;
+      // std::clog << "after set insert with numdistincts given" << std::endl;
     }
-  rels[rel].print();
+  // rels[rel].print();
 }
 
 void Statistics::CopyRel(char *oldName, char *newName)
@@ -98,7 +99,7 @@ void Statistics::CopyRel(char *oldName, char *newName)
     }
 
   rels[newN] = newR; // put new relation in
-  newR.print();
+  // newR.print();
 }
 
 void Statistics::Read(char *fromWhere)
@@ -222,7 +223,7 @@ void Statistics::Apply(struct AndList *parseTree, char *relNames[], int numToJoi
   if (0 == parseTree and 2 >= numToJoin)
     {
       double accumulator = 1.0l;
-      for (unsigned i = 0; i < numToJoin; i++)
+      for (signed i = 0; i < numToJoin; i++)
         {
           string rel(relNames[i]);
           accumulator *= rels[rel].NumTuples();
@@ -237,7 +238,7 @@ void Statistics::Apply(struct AndList *parseTree, char *relNames[], int numToJoi
   string newRelation;
   if(HasJoin(parseTree))
     {
-      for (unsigned i = 0; i < numToJoin; i++)
+      for (signed i = 0; i < numToJoin; i++)
         {
           string rel(relNames[i]);
           newRelation += rel;
@@ -319,7 +320,7 @@ double Statistics::Estimate(struct AndList *parseTree, char **relNames, int numT
   if (0 == parseTree and 2 >= numToJoin)
     {
       double accumulator = 1.0l;
-      for (unsigned i = 0; i < numToJoin; i++)
+      for (signed i = 0; i < numToJoin; i++)
         {
           string rel(relNames[i]);
           accumulator *= rels[rel].NumTuples();
@@ -403,13 +404,14 @@ std::vector<std::string> Statistics :: CheckParseTree(struct AndList *pAnd)
             {
               {
                 struct Operand *pOperand = pCom->left;
-                if(pOperand!=NULL && (4 == pOperand->code))
+                if(pOperand!=NULL && (NAME == pOperand->code))
                   {
                     // check left operand
                     std::string attr(pOperand->value);
                     if (0 == extantAttrs.count(attr))
                       {
-                        std::cerr << "operand attribute \"" << attr << "\" not found" << std::endl;
+                        std::cerr << "left operand attribute \"" << attr << "\" not found" << std::endl;
+                        assert(0 != extantAttrs.count(attr));
                         exit(-1);
                       }
                     attrs.push_back(attr);
@@ -417,13 +419,14 @@ std::vector<std::string> Statistics :: CheckParseTree(struct AndList *pAnd)
               }
               {
                 struct Operand *pOperand = pCom->right;
-                if(pOperand!=NULL && (4 == pOperand->code))
+                if(pOperand!=NULL && (NAME == pOperand->code))
                   {
                     // check right operand
                     std::string attr(pOperand->value);
                     if (0 == extantAttrs.count(attr))
                       {
-                        std::cerr << "operand attribute \"" << attr << "\" not found" << std::endl;
+                        std::cerr << "right operand attribute \"" << attr << "\" not found" << std::endl;
+                        assert(0 != extantAttrs.count(attr));
                         exit(-1);
                       }
                     attrs.push_back(attr);
@@ -496,8 +499,8 @@ double Statistics :: CalculateEstimate(AndList *pAnd)
                 {
                 case EQUALS: // maybe selection or maybe join
                   {
-                    if ((0 != lOperand and (4 == lOperand->code)) and
-                        (0 != rOperand and (4 == rOperand->code)))
+                    if ((0 != lOperand and (NAME == lOperand->code)) and
+                        (0 != rOperand and (NAME == rOperand->code)))
                       {// this is a join, because both the left and right are attribute names
                         clog << endl << "join case estimation" << endl << endl;
                         seenJoin = true;
@@ -536,19 +539,16 @@ double Statistics :: CalculateEstimate(AndList *pAnd)
                         clog << endl <<  "*** EQUALITY SELECTION" << endl;
                         Operand *opnd = 0;
                         Operand *constant = 0;
-                        if (4 == lOperand->code)
+                        if (NAME == lOperand->code)
                           {opnd = lOperand; constant = rOperand; }
-                        else if (4 == rOperand->code)
+                        else if (NAME == rOperand->code)
                           {opnd = rOperand; constant = lOperand;}
                         assert(0 != opnd); // something was assigned
                         assert(0 != constant); // something was assigned
 
                         string const attr(opnd->value);
                         string const relation = extantAttrs[attr];
-                        tupleCount const relationSize = rels[relation].NumTuples();
                         tupleCount const distinct = rels[relation].GetDistinct(attr);
-                        double const numerator   = relationSize;
-                        double const denominator = distinct;
                         clog << "singleOr is " << singleOR << endl;
                         if (singleOR)
                           {
@@ -588,17 +588,15 @@ double Statistics :: CalculateEstimate(AndList *pAnd)
                   // so either of our operands could be a literal value rather than an attribute
                   Operand *opnd = 0;
                   Operand *constant = 0;
-                  if (4 == lOperand->code)
+                  if (NAME == lOperand->code)
                     {opnd = lOperand; constant = rOperand; }
-                  else if (4 == rOperand->code)
+                  else if (NAME == rOperand->code)
                     {opnd = rOperand; constant = lOperand;}
                   assert(0 != opnd); // something was assigned
                   assert(0 != constant); // something was assigned
 
                   string const attr(opnd->value);
                   string const relation = extantAttrs[attr];
-                  tupleCount const relationSize = rels[relation].NumTuples();
-                  tupleCount const distinct = rels[relation].GetDistinct(attr);
 
                   if(independentORs) // independent ORs
                     {
@@ -617,9 +615,9 @@ double Statistics :: CalculateEstimate(AndList *pAnd)
               if (!seenJoin)
                 {
                   Operand *opnd = 0;
-                  if (4 == lOperand->code)
+                  if (NAME == lOperand->code)
                     {opnd = lOperand;}
-                  else if (4 == rOperand->code)
+                  else if (NAME == rOperand->code)
                     {opnd = rOperand;}
                   string const attr(opnd->value);
                   string const relation = extantAttrs[attr];
@@ -628,13 +626,14 @@ double Statistics :: CalculateEstimate(AndList *pAnd)
                 }
               {
                 struct Operand *pOperand = pCom->left;
-                if(pOperand!=NULL and (4 == pOperand->code))
+                if(pOperand!=NULL and (NAME == pOperand->code))
                   {
                     // check left operand
                     std::string attr(pOperand->value);
                     if (0 == extantAttrs.count(attr))
                       {
-                        std::cerr << "operand attribute \"" << attr << "\" not found" << std::endl;
+                        std::cerr << "estimate left operand attribute \"" << attr << "\" not found" << std::endl;
+                        assert(0 != extantAttrs.count(attr));
                         exit(-1);
                       }
                   }
@@ -642,13 +641,14 @@ double Statistics :: CalculateEstimate(AndList *pAnd)
               // operator
               {
                 struct Operand *pOperand = pCom->right;
-                if(pOperand!=NULL and (4 == pOperand->code))
+                if(pOperand!=NULL and (NAME == pOperand->code))
                   {
                     // check right operand
                     std::string attr(pOperand->value);
                     if (0 == extantAttrs.count(attr))
                       {
-                        std::cerr << "operand attribute \"" << attr << "\" not found" << std::endl;
+                        std::cerr << "estimate right operand attribute \"" << attr << "\" not found" << std::endl;
+                        assert(0 != extantAttrs.count(attr));
                         exit(-1);
                       }
                   }
@@ -739,8 +739,8 @@ bool Statistics :: HasJoin(AndList *pAnd)
                 {
                 case EQUALS: // maybe selection or maybe join
                   {
-                    if ((0 != lOperand and (4 == lOperand->code)) and
-                        (0 != rOperand and (4 == rOperand->code)))
+                    if ((0 != lOperand and (NAME == lOperand->code)) and
+                        (0 != rOperand and (NAME == rOperand->code)))
                       {// this is a join, because both the left and right are attribute names
                         clog << endl << "join case estimation" << endl << endl;
                         seenJoin = true;
@@ -779,19 +779,16 @@ bool Statistics :: HasJoin(AndList *pAnd)
                         clog << endl <<  "*** EQUALITY SELECTION" << endl;
                         Operand *opnd = 0;
                         Operand *constant = 0;
-                        if (4 == lOperand->code)
+                        if (NAME == lOperand->code)
                           {opnd = lOperand; constant = rOperand; }
-                        else if (4 == rOperand->code)
+                        else if (NAME == rOperand->code)
                           {opnd = rOperand; constant = lOperand;}
                         assert(0 != opnd); // something was assigned
                         assert(0 != constant); // something was assigned
 
                         string const attr(opnd->value);
                         string const relation = extantAttrs[attr];
-                        tupleCount const relationSize = rels[relation].NumTuples();
                         tupleCount const distinct = rels[relation].GetDistinct(attr);
-                        double const numerator   = relationSize;
-                        double const denominator = distinct;
                         clog << "singleOr is " << singleOR << endl;
                         if (singleOR)
                           {
@@ -831,17 +828,15 @@ bool Statistics :: HasJoin(AndList *pAnd)
                   // so either of our operands could be a literal value rather than an attribute
                   Operand *opnd = 0;
                   Operand *constant = 0;
-                  if (4 == lOperand->code)
+                  if (NAME == lOperand->code)
                     {opnd = lOperand; constant = rOperand; }
-                  else if (4 == rOperand->code)
+                  else if (NAME == rOperand->code)
                     {opnd = rOperand; constant = lOperand;}
                   assert(0 != opnd); // something was assigned
                   assert(0 != constant); // something was assigned
 
                   string const attr(opnd->value);
                   string const relation = extantAttrs[attr];
-                  tupleCount const relationSize = rels[relation].NumTuples();
-                  tupleCount const distinct = rels[relation].GetDistinct(attr);
 
                   if(independentORs) // independent ORs
                     {
@@ -860,9 +855,9 @@ bool Statistics :: HasJoin(AndList *pAnd)
               if (!seenJoin)
                 {
                   Operand *opnd = 0;
-                  if (4 == lOperand->code)
+                  if (NAME == lOperand->code)
                     {opnd = lOperand;}
-                  else if (4 == rOperand->code)
+                  else if (NAME == rOperand->code)
                     {opnd = rOperand;}
                   string const attr(opnd->value);
                   string const relation = extantAttrs[attr];
@@ -871,13 +866,14 @@ bool Statistics :: HasJoin(AndList *pAnd)
                 }
               {
                 struct Operand *pOperand = pCom->left;
-                if(pOperand!=NULL and (4 == pOperand->code))
+                if(pOperand!=NULL and (NAME == pOperand->code))
                   {
                     // check left operand
                     std::string attr(pOperand->value);
                     if (0 == extantAttrs.count(attr))
                       {
                         std::cerr << "operand attribute \"" << attr << "\" not found" << std::endl;
+                        assert(0 != extantAttrs.count(attr));
                         exit(-1);
                       }
                   }
@@ -885,13 +881,14 @@ bool Statistics :: HasJoin(AndList *pAnd)
               // operator
               {
                 struct Operand *pOperand = pCom->right;
-                if(pOperand!=NULL and (4 == pOperand->code))
+                if(pOperand!=NULL and (NAME == pOperand->code))
                   {
                     // check right operand
                     std::string attr(pOperand->value);
                     if (0 == extantAttrs.count(attr))
                       {
                         std::cerr << "operand attribute \"" << attr << "\" not found" << std::endl;
+                        assert(0 != extantAttrs.count(attr));
                         exit(-1);
                       }
                   }

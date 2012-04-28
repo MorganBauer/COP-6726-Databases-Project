@@ -18,7 +18,7 @@ class RelationInformation
   std::map<std::string, tupleCount> attributeInformation;
  public:
   RelationInformation () : numberOfTuples(0), attributeInformation() {}
-  RelationInformation (tupleCount tuples) : numberOfTuples(tuples) {}
+  explicit RelationInformation (tupleCount tuples) : numberOfTuples(tuples), attributeInformation() {}
   std::map<std::string, tupleCount> const GetAtts()
     {
       return attributeInformation;
