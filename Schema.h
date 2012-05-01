@@ -22,8 +22,8 @@ struct Attribute {
 class OrderMaker;
 class Schema {
  private:
-  Schema operator=(const Schema&);
-  Schema(const Schema&);
+  /* Schema operator=(const Schema&); */
+
 	// gives the attributes in the schema
 	int numAtts;
 	Attribute *myAtts;
@@ -34,7 +34,8 @@ class Schema {
 	friend class Record;
 
 public:
-
+        Schema(const Schema&);
+        Schema& operator=(const Schema&);
 	// gets the set of attributes, but be careful with this, since it leads
 	// to aliasing!!!
 	Attribute *GetAtts ();
@@ -50,7 +51,7 @@ public:
 	Type FindType (char *attName);
 
 	// this reads the specification for the schema in from a file
-	Schema (char *fName, char *relName);
+	Schema (char *fName, const char * relName);
 
 	// this composes a schema instance in-memory
 	Schema (char *fName, int num_atts, Attribute *atts);
@@ -58,7 +59,9 @@ public:
 	// this constructs a sort order structure that can be used to
 	// place a lexicographic ordering on the records using this type of schema
 	int GetSortOrder (OrderMaker &order);
-
+        void Reseat(string prefix);
+        void Print();
+ Schema() : numAtts(0), myAtts(0), fileName(0) { fileName = 0;}
 	~Schema ();
 
 };

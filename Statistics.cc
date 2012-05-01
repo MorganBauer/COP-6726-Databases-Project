@@ -42,10 +42,11 @@ void Statistics::AddRel(char *relName, int numTuples)
   using std::string;
   // look up in map, insert
   string s(relName);
-  const RelationInformation newRelation (numTuples);
+  const RelationInformation newRelation (numTuples, s);
   rels[s] = newRelation;
   rels.insert( make_pair(s,newRelation));
   rels[s].print();
+
 }
 
 void Statistics::AddAtt(char *relName, char *attName, int numDistincts)
@@ -89,17 +90,19 @@ void Statistics::CopyRel(char *oldName, char *newName)
   std::string newN(newName);
   std::map < std::string, tupleCount > const oldAttrs = rels[oldN].GetAtts();
 
-  RelationInformation newR(rels[oldN].NumTuples());
+  RelationInformation newR(rels[oldN].NumTuples(), oldN);
 
   std::map < std::string, tupleCount >::const_iterator it;
   for (it = oldAttrs.begin(); it != oldAttrs.end(); it++ )
     {
-      newR.AddAtt((newN+"."+(*it).first), (*it).second); // add modified attr to new relation
-      extantAttrs[(newN+"."+(*it).first)] = newN; // know where these modified attrs are
+      string newAttrName(newN+"."+(*it).first); // might need to do this for the schma variables as well.
+      clog << "aliasing " << newAttrName << newAttrName.size() << " to " << newN << endl;
+      newR.AddAtt(newAttrName, (*it).second); // add modified attr to new relation
+      extantAttrs[newAttrName] = newN; // know where these modified attrs are
     }
 
   rels[newN] = newR; // put new relation in
-  // newR.print();
+  newR.print();
 }
 
 void Statistics::Read(char *fromWhere)
@@ -245,7 +248,7 @@ void Statistics::Apply(struct AndList *parseTree, char *relNames[], int numToJoi
         }
       clog << "new relation is " << newRelation << endl;
       // new map, to have both relations merged into it.
-      RelationInformation merged(estimate); // new relation with estimated
+      RelationInformation merged(estimate,newRelation); // new relation with estimated
 
       for (int i = 0; i < numToJoin ; i++)
         {

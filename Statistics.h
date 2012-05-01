@@ -10,15 +10,17 @@
 #include <vector>
 #include <iostream>
 
-
 class RelationInformation
 {
   typedef unsigned long long tupleCount;
   tupleCount numberOfTuples;
   std::map<std::string, tupleCount> attributeInformation;
+  // Schema sch;
+  std::string originalName;
  public:
-  RelationInformation () : numberOfTuples(0), attributeInformation() {}
-  explicit RelationInformation (tupleCount tuples) : numberOfTuples(tuples), attributeInformation() {}
+  RelationInformation () : numberOfTuples(0), attributeInformation(), originalName() {}
+  explicit RelationInformation (tupleCount tuples, std::string origNme) : numberOfTuples(tuples), attributeInformation(), /* sch(), */ originalName(origNme)
+  {/* char * cat = "catalog"; sch = Schema(cat, origNme.c_str()); */}
   std::map<std::string, tupleCount> const GetAtts()
     {
       return attributeInformation;
@@ -108,6 +110,26 @@ class Statistics
 
   void  Apply(struct AndList *parseTree, char *relNames[], int numToJoin);
   double Estimate(struct AndList *parseTree, char **relNames, int numToJoin);
+
+  std::string getAttrHomeTable(std::string a)
+    {
+      using std::clog;
+      using std::endl;
+      using std::string;
+      clog << "called get attr home table" << endl;
+      // std::string a(attr);
+      clog << a << a.size() << endl;
+      clog << "found " << extantAttrs.count(a);
+      if (1 == extantAttrs.count(a))
+        {
+          clog << "WTF" << endl;
+          clog << extantAttrs[a] << endl;
+          string tbl(extantAttrs[a]);
+          clog << tbl << endl;
+          return tbl;
+        }
+      return "";
+    }
 
   void print()
   {
