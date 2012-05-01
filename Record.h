@@ -62,8 +62,9 @@ public:
 
 	// this projects away various attributes...
 	// the array attsToKeep should be sorted, and lists all of the attributes
-	// that should still be in the record after Project is called.  numAttsNow
-	// tells how many attributes are currently in the record
+	// that should still be in the record after Project is called.
+        //
+        // numAttsNow tells how many attributes are currently in the record
 	void Project (int *attsToKeep, int numAttsToKeep, int numAttsNow);
 
 	// takes two input records and creates a new record by concatenating them;

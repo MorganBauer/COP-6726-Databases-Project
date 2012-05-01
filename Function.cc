@@ -7,6 +7,7 @@ Function :: Function () : opList(0), numOps(0), returnsInt(0)
 	opList = new Arithmatic[MAX_DEPTH];
 }
 
+// helper function for growfromparsetree
 Type Function :: RecursivelyBuild (struct FuncOperator *parseTree, Schema &mySchema) {
 
 	// different cases; in the first case, simple, unary operation

@@ -1,4 +1,4 @@
-CC = g++ -O0 -ggdb3 -std=gnu++0x -fopenmp -Wall -Wextra -Wshadow -Wno-write-strings -Wno-deprecated -Weffc++ -pedantic-errors -lrt
+CC = g++ -O0 -ggdb3 -std=gnu++0x -fopenmp -Wall -Wextra -Wshadow -Wno-write-strings -Wno-deprecated -pedantic-errors -lrt
 # ccache
 # -D_GLIBCXX_PARALLEL -march=native -msse2 -ffast-math -fomit-frame-pointer
 # wtf is this below? tag is set to '-i', but if on linux it is '-n'? INVESTIGATE TODO
@@ -10,7 +10,7 @@ endif
 
 again: clean all
 
-all: a1test a2-1test a22.out a3.out a4-1.out
+all: main
 
 a4-1.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o Statistics.o y.tab.o lex.yy.o test.o
 	$(CC) -o a4-1.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o Statistics.o y.tab.o lex.yy.o test.o -lfl
@@ -45,8 +45,8 @@ a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o Generi
 a1test.o: a1test.cc a1test.h
 	$(CC)  -c a1test.cc
 
-main:   y.tab.o lex.yy.o main.o Statistics.o
-	$(CC) -o main y.tab.o lex.yy.o main.o Statistics.o -lfl
+main:   y.tab.o lex.yy.o main.o Statistics.o Schema.o
+	$(CC) -o main y.tab.o lex.yy.o main.o Statistics.o Schema.o -lfl
 
 main.o : main.cc
 	$(CC) -g -c main.cc
@@ -125,3 +125,4 @@ clean:
 	rm -f yyfunc.tab.*
 	rm -f lex.yy.*
 	rm -f lex.yyfunc*
+	rm -f main
