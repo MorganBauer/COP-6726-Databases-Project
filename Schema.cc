@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <vector>
 
-int Schema :: Find (char *attName) {
+int Schema :: Find (const char *attName) {
 
 	for (int i = 0; i < numAtts; i++) {
 		if (!strcmp (attName, myAtts[i].name)) {
@@ -151,6 +152,22 @@ Schema :: Schema (char *fName, const char * relName) : numAtts(0), myAtts(0), fi
 	}
 
 	fclose (foo);
+}
+
+Schema::Schema(const Schema& s, vector<int> indexesToKeep) : fileName(0)
+{
+  if (0 != s.fileName)
+    fileName = strdup(s.fileName);
+  numAtts = indexesToKeep.size();
+  myAtts = new Attribute[numAtts];
+  int i = 0;
+  for (vector<int>::iterator it = indexesToKeep.begin(); it != indexesToKeep.end(); it++)
+    {
+      myAtts[i] = s.myAtts[(*it)];
+      myAtts[i].name = strdup(myAtts[(*it)].name);
+      i++;
+    }
+  return;
 }
 
 Schema::Schema(const Schema& s) : fileName(0)

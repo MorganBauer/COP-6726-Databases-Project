@@ -45,10 +45,10 @@ a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o Generi
 a1test.o: a1test.cc a1test.h
 	$(CC)  -c a1test.cc
 
-main:   y.tab.o lex.yy.o main.o Statistics.o Schema.o
-	$(CC) -o main y.tab.o lex.yy.o main.o Statistics.o Schema.o -lfl
+main:   y.tab.o lex.yy.o main.o Statistics.o Schema.o Record.o Comparison.o ComparisonEngine.o File.o DBFile.o GenericDBFile.o HeapDBFile.o BigQ.o Pipe.o SortedDBFile.o RelOp.o Function.o
+	$(CC) -o main y.tab.o lex.yy.o Schema.o Record.o Comparison.o ComparisonEngine.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o RelOp.o Function.o  Statistics.o main.o -lfl
 
-main.o : main.cc
+main.o : main.cc main.h
 	$(CC) -g -c main.cc
 
 Comparison.o: Comparison.cc Comparison.h

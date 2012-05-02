@@ -1,7 +1,7 @@
- 
+
 %{
 
-	#include "ParseTree.h" 
+	#include "ParseTree.h"
 	#include <stdio.h>
 	#include <string.h>
 	#include <stdlib.h>
@@ -10,22 +10,27 @@
 	extern "C" int yylex();
 	extern "C" int yyparse();
 	extern "C" void yyerror(char *s);
-  
+
 	// these data structures hold the result of the parsing
 	struct FuncOperator *finalFunction; // the aggregate function (NULL if no agg)
 	struct TableList *tables; // the list of tables and aliases in the query
 	struct AndList *boolean; // the predicate in the WHERE clause
 	struct NameList *groupingAtts; // grouping atts (NULL if no grouping)
 	struct NameList *attsToSelect; // the set of attributes in the SELECT (NULL if no such atts)
-	int distinctAtts; // 1 if there is a DISTINCT in a non-aggregate query 
+	int distinctAtts; // 1 if there is a DISTINCT in a non-aggregate query
 	int distinctFunc;  // 1 if there is a DISTINCT in an aggregate query
-
+        int query;
+        // maintenance commands
+        int outputChange;
+        int planOnly; // 1 if we are changing settings to planning only. Do not execute.
+        int setStdOut;
+        char * outName;
 %}
 
 // this stores all of the types returned by production rules
 %union {
  	struct FuncOperand *myOperand;
-	struct FuncOperator *myOperator; 
+	struct FuncOperator *myOperator;
 	struct TableList *myTables;
 	struct ComparisonOp *myComparison;
 	struct Operand *myBoolOperand;
@@ -36,12 +41,16 @@
 	char whichOne;
 }
 
+%token <actualChars> FilePath
 %token <actualChars> Name
 %token <actualChars> Float
 %token <actualChars> Int
 %token <actualChars> String
+%token CREATE
+%token DROP
+%token TABLE
 %token SELECT
-%token GROUP 
+%token GROUP
 %token DISTINCT
 %token BY
 %token FROM
@@ -50,17 +59,26 @@
 %token AS
 %token AND
 %token OR
+%token INTEGER_ATTR FLOAT_ATTR STRING_ATTR
+%token HEAP SORTED
+%token ON
+%token SET
+%token INSERT INTO
+%token OUTPUT NONE STDOUT
+%token UPDATE STATISTICS
+%token SHUTDOWN
 
 %type <myOrList> OrList
 %type <myAndList> AndList
 %type <myOperand> SimpleExp
 %type <myOperator> CompoundExp
-%type <whichOne> Op 
+%type <whichOne> Op
 %type <myComparison> BoolComp
 %type <myComparison> Condition
 %type <myTables> Tables
 %type <myBoolOperand> Literal
 %type <myNames> Atts
+%type <myAttrList> AttrList
 
 %start SQL
 
@@ -68,7 +86,7 @@
 //******************************************************************************
 // SECTION 3
 //******************************************************************************
-/* This is the PRODUCTION RULES section which defines how to "understand" the 
+/* This is the PRODUCTION RULES section which defines how to "understand" the
  * input language and what action to take for each "statment"
  */
 
@@ -76,19 +94,80 @@
 
 SQL: SELECT WhatIWant FROM Tables WHERE AndList
 {
+  query = 1;
 	tables = $4;
-	boolean = $6;	
+	boolean = $6;
 	groupingAtts = NULL;
+        outName = 0;
 }
 
 | SELECT WhatIWant FROM Tables WHERE AndList GROUP BY Atts
 {
+  query = 1;
 	tables = $4;
-	boolean = $6;	
+	boolean = $6;
 	groupingAtts = $9;
+        outName = 0;
+}
+
+| CREATE TABLE Table '(' AttrList ')' AS HEAP ';'
+{
+  query = 0;
+  outName = 0;
+}
+| CREATE TABLE Table '(' AttrList ')' AS SORTED ON Atts ';'
+{
+  query = 0;
+  outName = 0;
+}
+| DROP TABLE Table';'
+{
+  query = 0;
+  outName = 0;
+}
+| SET OUTPUT OutSetting ';'
+{
+  query = 0;
+  outputChange = 1;
+}
+| INSERT FilePath INTO Table ';'
+{};
+
+OutSetting: STDOUT
+{
+  setStdOut = 1;
+}
+| NONE
+{
+  planOnly = 1;
+}
+| FilePath
+{
+  outName = $1;
+  printf("found ### %s ###\n", $1);
+  printf("%p\n", $1);
 };
 
-WhatIWant: Function ',' Atts 
+Table: Name
+{};
+
+AttrList: Attribute AttrType ',' AttrList // non terminal type, more than one attribute
+{}
+
+| Attribute AttrType // final attribute in list
+{};
+
+Attribute: Name
+{};
+
+AttrType : INTEGER_ATTR
+{}
+| FLOAT_ATTR
+{}
+| STRING_ATTR
+{};
+
+WhatIWant: Function ',' Atts
 {
 	attsToSelect = $3;
 	distinctAtts = 0;
@@ -99,7 +178,7 @@ WhatIWant: Function ',' Atts
 	attsToSelect = NULL;
 }
 
-| Atts 
+| Atts
 {
 	distinctAtts = 0;
 	finalFunction = NULL;
@@ -131,7 +210,7 @@ Atts: Name
 	$$ = (struct NameList *) malloc (sizeof (struct NameList));
 	$$->name = $1;
 	$$->next = NULL;
-} 
+}
 
 | Atts ',' Name
 {
@@ -140,7 +219,7 @@ Atts: Name
 	$$->next = $1;
 }
 
-Tables: Name AS Name 
+Tables: Name AS Name
 {
 	$$ = (struct TableList *) malloc (sizeof (struct TableList));
 	$$->tableName = $1;
@@ -160,24 +239,24 @@ Tables: Name AS Name
 
 CompoundExp: SimpleExp Op CompoundExp
 {
-	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));	
+	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
 	$$->leftOperator = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
 	$$->leftOperator->leftOperator = NULL;
 	$$->leftOperator->leftOperand = $1;
 	$$->leftOperator->right = NULL;
 	$$->leftOperand = NULL;
 	$$->right = $3;
-	$$->code = $2;	
+	$$->code = $2;
 
 }
 
 | '(' CompoundExp ')' Op CompoundExp
 {
-	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));	
+	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
 	$$->leftOperator = $2;
 	$$->leftOperand = NULL;
 	$$->right = $5;
-	$$->code = $4;	
+	$$->code = $4;
 
 }
 
@@ -189,19 +268,19 @@ CompoundExp: SimpleExp Op CompoundExp
 
 | SimpleExp
 {
-	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));	
+	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
 	$$->leftOperator = NULL;
 	$$->leftOperand = $1;
-	$$->right = NULL;	
+	$$->right = NULL;
 
 }
 
 | '-' CompoundExp
 {
-	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));	
+	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
 	$$->leftOperator = $2;
 	$$->leftOperand = NULL;
-	$$->right = NULL;	
+	$$->right = NULL;
 	$$->code = '-';
 
 }
@@ -333,7 +412,7 @@ Literal : String
 ;
 
 
-SimpleExp: 
+SimpleExp:
 
 Float
 {
@@ -341,7 +420,7 @@ Float
         $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
         $$->code = DOUBLE;
         $$->value = $1;
-} 
+}
 
 | Int
 {
@@ -349,7 +428,7 @@ Float
         $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
         $$->code = INT;
         $$->value = $1;
-} 
+}
 
 | Name
 {

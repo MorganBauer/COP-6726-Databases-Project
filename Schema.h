@@ -3,6 +3,7 @@
 #define SCHEMA_H
 
 #include <stdio.h>
+#include <vector>
 #include "Record.h"
 #include "Schema.h"
 #include "File.h"
@@ -45,7 +46,7 @@ public:
 
 	// this finds the position of the specified attribute in the schema
 	// returns a -1 if the attribute is not present in the schema
-	int Find (char *attName);
+	int Find (const char *attName);
 
 	// this finds the type of the given attribute
 	Type FindType (char *attName);
@@ -56,10 +57,13 @@ public:
 	// this composes a schema instance in-memory
 	Schema (char *fName, int num_atts, Attribute *atts);
 
+
+        Schema(const Schema& s, std::vector<int> indexesToKeep);
+
 	// this constructs a sort order structure that can be used to
 	// place a lexicographic ordering on the records using this type of schema
 	int GetSortOrder (OrderMaker &order);
-        void Reseat(string prefix);
+        void Reseat(std::string prefix);
         void Print();
  Schema() : numAtts(0), myAtts(0), fileName(0) { fileName = 0;}
 	~Schema ();

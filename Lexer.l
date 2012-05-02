@@ -2,7 +2,7 @@
  * SECTION 1
  ***********************************************************************/
 /* The code in %{ %} is included as it is in lex.yy.c file
- * it has C global variables, prototypes, and comments 
+ * it has C global variables, prototypes, and comments
  */
 
 
@@ -34,6 +34,42 @@ void yyerror(char*s);
  */
 
 %%
+
+"CREATE"                return (CREATE);
+
+"DROP"                  return (DROP);
+
+"UPDATE"                return (UPDATE);
+
+"STATISTICS"            return (STATISTICS);
+
+"SHUTDOWN"              return (SHUTDOWN);
+
+"TABLE"                 return (TABLE);
+
+"DOUBLE"                return (FLOAT_ATTR);
+
+"INTEGER"               return (INTEGER_ATTR);
+
+"STRING"                return (STRING_ATTR);
+
+"HEAP"                  return (HEAP);
+
+"SORTED"                return (SORTED);
+
+"ON"                    return (ON);
+
+"SET"                   return (SET);
+
+"OUTPUT"                return (OUTPUT);
+
+"STDOUT"                return (STDOUT);
+
+"NONE"                  return (NONE);
+
+"INSERT"                return (INSERT);
+
+"INTO"                  return (INTO);
 
 "SELECT"		return(SELECT);
 
@@ -75,21 +111,32 @@ void yyerror(char*s);
 
 ","    	        	return(',');
 
+";"    	        	return(';');
+
 -?[0-9]+ 	       {yylval.actualChars = strdup(yytext);
-  			return(Int); 
+  			return(Int);
 		        }
 
--?[0-9]+\.[0-9]*       {yylval.actualChars = strdup(yytext); 
+-?[0-9]+\.[0-9]*       {yylval.actualChars = strdup(yytext);
   			return(Float);
 			}
 
 [A-Za-z][A-Za-z0-9_-]* {yylval.actualChars = strdup(yytext);
   			return(Name);
-			}     
+			}
 
 [A-Za-z][A-Za-z0-9_-]*\.[A-Za-z][A-Za-z0-9_-]* {yylval.actualChars = strdup(yytext);
   			return(Name);
-			}     
+			}
+
+\'[A-Za-z0-9_\/\.]*\' {yylval.actualChars = strdup(yytext + 1);
+                       if (yylval.actualChars[yyleng-2] != '\'')
+                           printf("improperly terminated string");
+                       else
+                           yylval.actualChars[yyleng-2] = 0;
+                       printf("found ### %s ###\n", yylval.actualChars);
+                       return(FilePath);
+                       }
 
 \'[^'\n]*\'            {/* take care of ' in a string */
                         if (yytext[yyleng - 2] == '\\') {
