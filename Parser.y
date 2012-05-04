@@ -7,7 +7,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
-
+#include <utility>
+#include <algorithm>
   using namespace std;
 
   extern "C" int yylex();
@@ -24,9 +25,12 @@
   int distinctFunc = 0; // 1 if there is a DISTINCT in an aggregate query
   int query = 0;
   // maintenance commands
-  // CREAT
+  // CREATE
   int createTable = 0; // 1 if the SQL is create table
   int tableType = 0; // 1 for heap, 2 for sorted.
+  char * attrName;
+  // int attrType;
+  vector<myAttribute> attributes;
   // INSERT
   int insertTable = 0; // 1 if the command is Insert into table
   int dropTable = 0; // 1 is the command is Drop table
@@ -36,8 +40,9 @@
   int setStdOut = 0;
 
   bool keepGoing = true;
-  // this is used for both input and output file names. A copy is made inside the database.
-  string fileName;
+  // shared variables, variables shared between more than one parsing.
+  string tableName;
+  string fileName; // this is used for both input and output file names. A copy is made inside the database.
   %}
 
 // this stores all of the types returned by production rules
@@ -53,10 +58,12 @@
   struct AttrList *myAttrs;
   char *actualChars;
   char whichOne;
+  int attrType;
 }
 
 %token <actualChars> FilePath
 %token <actualChars> Name
+%token <actualChars> Attribute
 %token <actualChars> Float
 %token <actualChars> Int
 %token <actualChars> String
@@ -73,7 +80,7 @@
 %token AS
 %token AND
 %token OR
-%token INTEGER_ATTR FLOAT_ATTR STRING_ATTR
+%token <attrType> INTEGER_ATTR FLOAT_ATTR STRING_ATTR
 %token HEAP SORTED
 %token ON
 %token SET
@@ -93,6 +100,7 @@
 %type <myBoolOperand> Literal
 %type <myNames> Atts
 %type <myAttrList> AttrList
+%type <attrType> AttrType
 
 %start SQL
 
@@ -121,26 +129,28 @@ SQL: SELECT WhatIWant FROM Tables WHERE AndList
   boolean = $6;
   groupingAtts = $9;
   }
-| CREATE TABLE Table '(' AttrList ')' AS DBFileType
+| CREATE TABLE Name '(' AttrList ')' AS DBFileType
 {
-
+  tableName = $3;
   createTable = 1;
-  }
-| DROP TABLE Table
+  reverse(attributes.begin(), attributes.end());
+}
+| DROP TABLE Name
 {
-    dropTable = 1;
-  }
+  dropTable = 1;
+}
 | SET OUTPUT OutSetting
 {
-    outputChange = 1;
+  outputChange = 1;
 }
-| INSERT FilePath INTO Table
+| INSERT FilePath INTO Name
 {
-    insertTable = 1;
-    fileName = $2;
+  insertTable = 1;
+  fileName = $2;
 }
 | SHUTDOWN
 {
+  query = -1;
   keepGoing = false;
 };
 
@@ -171,23 +181,34 @@ OutSetting: STDOUT
   // printf("%p\n", $1);
 };
 
-Table: Name
-{};
-
-AttrList: Attribute AttrType ',' AttrList // non terminal type, more than one attribute
-{}
-| Attribute AttrType // final attribute in list
-{};
-
-Attribute: Name
-{};
+AttrList: Name AttrType ',' AttrList // non terminal type, more than one attribute
+{
+  myAttribute attr;
+  attr.name = $1;
+  attr.myType = $2;
+  attributes.push_back(attr);
+}
+| Name AttrType // final attribute in list
+{
+  // const static int IntType = 0, DoubleType = 1, StringType = 2;
+  myAttribute attr;
+  attr.name = $1;
+  attr.myType = $2;
+  attributes.push_back(attr);
+};
 
 AttrType : INTEGER_ATTR
-{}
+{
+  $$ = 0;
+}
 | FLOAT_ATTR
-{}
+{
+  $$ = 1;
+}
 | STRING_ATTR
-{};
+{
+  $$ = 2;
+};
 
 WhatIWant: Function ',' Atts
 {
@@ -256,8 +277,6 @@ Tables: Name AS Name
   $$->aliasAs = $5;
   $$->next = $1;
 }
-
-
 
 CompoundExp: SimpleExp Op CompoundExp
 {

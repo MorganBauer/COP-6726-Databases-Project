@@ -1,4 +1,12 @@
 
+* things to go over with dobra
+project 3. need to be regraded/fixed.
+gla thing
+project. have set up ahead of time.
+
+I have both the linear scan and priority queue and adaptively choose
+between the two.
+
 * generic c++ tips
 
 If you get an error like

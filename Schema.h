@@ -55,7 +55,7 @@ public:
 	Schema (char *fName, const char * relName);
 
 	// this composes a schema instance in-memory
-	Schema (char *fName, int num_atts, Attribute *atts);
+	Schema (const char *fName, int num_atts, Attribute *atts);
 
 
         Schema(const Schema& s, std::vector<int> indexesToKeep);

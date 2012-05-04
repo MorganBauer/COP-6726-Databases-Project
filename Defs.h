@@ -10,7 +10,7 @@
 
 enum Target {Left, Right, Literal};
 enum CompOperator {LessThan, GreaterThan, Equals};
-enum Type {Int, Double, String};
+enum Type {Int = 0, Double = 1, String = 2};
 enum ReturnState {FAILURE = 0, SUCCESS = 1};
 
 unsigned int Random_Generate();

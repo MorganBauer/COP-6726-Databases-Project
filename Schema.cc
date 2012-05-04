@@ -37,7 +37,7 @@ Attribute *Schema :: GetAtts () {
 	return myAtts;
 }
 
-Schema :: Schema (char *fpath, int num_atts, Attribute *atts) : numAtts(num_atts), myAtts(0), fileName(0) {
+Schema :: Schema (const char *fpath, int num_atts, Attribute *atts) : numAtts(num_atts), myAtts(0), fileName(0) {
 	fileName = strdup (fpath);
 	myAtts = new Attribute[numAtts];
 	for (int i = 0; i < numAtts; i++ ) {
@@ -170,7 +170,7 @@ Schema::Schema(const Schema& s, vector<int> indexesToKeep) : fileName(0)
   return;
 }
 
-Schema::Schema(const Schema& s) : fileName(0)
+Schema::Schema(const Schema& s) : fileName(0), myAtts(0)
 {
   if (0 != s.fileName)
     fileName = strdup(s.fileName);

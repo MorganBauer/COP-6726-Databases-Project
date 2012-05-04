@@ -99,21 +99,21 @@ TwoWayList.o : TwoWayList.cc TwoWayList.h
 y.tab.o: Parser.y
 	yacc -d Parser.y
 	sed $(tag) y.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/"
-	g++ -c y.tab.c
+	g++ -ggdb3 -c y.tab.c
 
 yyfunc.tab.o: ParserFunc.y
 	yacc -p "yyfunc" -b "yyfunc" -d ParserFunc.y
 	#sed $(tag) yyfunc.tab.c -e "s/  __attribute__ ((__unused__))$$/# ifndef __cplusplus\n  __attribute__ ((__unused__));\n# endif/"
-	g++ -c yyfunc.tab.c
+	g++ -ggdb3 -c yyfunc.tab.c
 
 
 lex.yy.o: Lexer.l
 	lex  Lexer.l
-	gcc  -c lex.yy.c
+	gcc -ggdb3 -c lex.yy.c
 
 lex.yyfunc.o: LexerFunc.l
 	lex -Pyyfunc LexerFunc.l
-	gcc  -c lex.yyfunc.c
+	gcc -ggdb3 -c lex.yyfunc.c
 
 clean:
 	rm -f a1test

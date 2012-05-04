@@ -1,6 +1,11 @@
 
 #include <iostream>
 #include <algorithm>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+#include <map>
+#include <set>
 #include "ParseTree.h"
 #include "Statistics.h"
 #include <cassert>
@@ -13,6 +18,13 @@ extern "C" {
 }
 
 typedef vector<AndList> Clauses;
+
+char * catalog_path = "catalog";
+char * tpch_dir ="/tmp/dbgen/"; // dir where dbgen tpch files (extension *.tbl) can be found
+// char *tpch_dir ="/cise/homes/mhb/dbi/origData/";
+char * dbfile_dir = "/tmp/mhb/";
+
+
 
 // these data structures hold the result of the parsing
 extern struct FuncOperator *finalFunction;
@@ -33,8 +45,10 @@ extern int dropTable; // 1 is the command is Drop table
 extern int outputChange;
 extern int planOnly;
 extern int setStdOut;
+extern string tableName;
 extern string fileName;
 extern bool keepGoing;
+extern vector<Attribute> attributes;
 
 char * const supplier = "supplier";
 char * const partsupp = "partsupp";
@@ -530,6 +544,27 @@ void cleanup(void)
   FreeNameList(groupingAtts);
   FreeNameList(attsToSelect);
   fileName = "";
+  tableName = "";
+  // empty the vector of attributes, free the namestring.
+  for(vector<Attribute>::iterator it = attributes.begin(); it != attributes.end(); it++)
+    {
+      free((*it).name);
+    }
+  attributes.clear();
+  distinctAtts = 0; // 1 if there is a DISTINCT in a non-aggregate query
+  distinctFunc = 0; // 1 if there is a DISTINCT in an aggregate query
+  query = 0;
+  // maintenance commands
+  // CREATE
+  createTable = 0; // 1 if the SQL is create table
+  tableType = 0; // 1 for heap, 2 for sorted.
+  // INSERT
+  insertTable = 0; // 1 if the command is Insert into table
+  dropTable = 0; // 1 is the command is Drop table
+  // SET command
+  outputChange = 0;
+  planOnly = 0; // 1 if we are changing settings to planning only. Do not execute.
+  setStdOut = 0;
 }
 
 int main ()
@@ -547,18 +582,27 @@ int main ()
          << padding << endl
          << "* " << message << " *" << endl
          << padding << endl
-         << tbBorder << endl;
+         << tbBorder << endl << endl;
+    cout << "Program defaults to planning only" << endl;
   }
   bool Execute = false;
   bool WriteToFile = false;
+  string FileToWriteTo;
+  string TableDir (dbfile_dir);
 
-
+  map<string, Schema> TableToSchema; // table to schema.
+  map<string, string> TableToFileName;
+  set<string> Tables;
   do
     {
+
+
       cout << "mdb> ";
-      yyparse();
 
       HiResTimer rtt; // time taken before control returned to the user.
+      rtt.start();
+
+      yyparse();
 
       if (1 == query)
         {
@@ -796,12 +840,16 @@ int main ()
               if(1 == planOnly)
                 {
                   clog << "PLANNING ONLY, NO EXECUTION." << endl;
+                  WriteToFile = false;
                   Execute = false;
+                  FileToWriteTo = "";
                 }
               else if (1 == setStdOut)
                 {
                   clog << "RESULTS TO STANDARD OUT, EXECUTE." << endl;
+                  WriteToFile = false;
                   Execute = true;
+                  FileToWriteTo = "";
                 }
               else if (!fileName.empty())
                 {
@@ -809,26 +857,79 @@ int main ()
                   string fname(fileName);
                   WriteToFile = true;
                   clog << "FILE IS " << fname << endl;
+                  FileToWriteTo = fname;
                   Execute = true;
                 }
             }
           else if (1 == insertTable) // INSERT 'mytable.tbl' INTO relation
             {
               cout << "insert table" << endl;
+              if(0 == Tables.count(tableName))
+                {
+                  cout << "there was no table by that name, doing nothing, try again." << endl;
+                }
             }
           else if (1 == createTable)
             {
               cout << "create table" << endl;
+              if(1 == Tables.count(tableName))
+                {
+                  cout << "table already exists, drop table first, doing nothing, try again." << endl;
+                }
+              else{
+                // CREATE TABLE mytable (att1 INTEGER, att2 DOUBLE, att3 STRING) AS HEAP;
+                // this should create a 'mytable.bin' file.
+                // need to manage that alias of mytable -> mytable.bin
+                // alias of mytable to Schema();
+
+                // need bookkeeping to remember the tables name.
+
+                // vector<myAttribute> attributes; // make schema with this, store in map
+
+                clog << "this many attributes in the new table" << attributes.size() << endl;
+
+                Schema newTableSchema(tableName.c_str(),attributes.size(),&attributes[0]);
+                newTableSchema.Print();
+                TableToSchema[tableName] = newTableSchema;
+                static const int HeapTableType(1);
+                static const int SortedTableType(2);
+
+                DBFile dbfile;
+                string tableLocation (TableDir+tableName+".bin");
+                TableToFileName[tableName] = tableLocation;
+                Tables.insert(tableName);
+                clog << "table will be located at " << tableLocation << endl;
+                if (HeapTableType == tableType)
+                  {
+                    clog << "dbfile created in heap mode " << endl;
+                    char * blah = strdup(tableLocation.c_str());
+                    dbfile.Create(blah,heap,0);
+                    dbfile.Close();
+                    free(blah);
+                  }
+                else if (SortedTableType == tableType)
+                  {
+                    // struct {OrderMaker *om; int l;} startup = {&om, runlen};
+                    // int rv = dbfile.Create (tableLocation, sorted, &startup); // create
+                  }
+              }
             }
           else if (1 == dropTable)
             {
               cout << "drop table" << endl;
             }
         }
-      else
+      else // something else, like quit maybe?
         {
           clog << endl;
         }
+      rtt.stop();
+      rtt.duration();
+      // do cleanup of all variables from parser, or maybe at the top.
+      cleanup();
     }
   while (keepGoing); // uncomment when we get the final stuff up.
+  cleanup();
+  // shutdown here
+  // write catalog to disk.
 }
