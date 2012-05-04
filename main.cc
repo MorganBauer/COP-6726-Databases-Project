@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 #include <vector>
 #include <map>
@@ -249,6 +250,19 @@ void CreateTablesAliases (TableList * tblst, Statistics & s, map<std::string, Sc
       schs[tblst->aliasAs] = oldSchema;
       tblst = tblst->next;
     }
+}
+
+vector<string> GetTableNames (TableList * tblst)
+{
+  vector<string> names;
+  while (0 != tblst)
+    {
+      string name(tblst->tableName);
+      names.push_back(name);
+      tblst = tblst->next;
+    }
+  reverse(names.begin(), names.end());
+  return names;
 }
 
 unsigned NumTables (TableList * tblst)
@@ -574,35 +588,34 @@ int main ()
 
 
   {
-    const string message("Welcome to MnemosyneDB");
-    const string spaces(message.size(),' ');
-    const string padding ("* " + spaces + " *");
-    const string tbBorder(padding.size(),'*');
-    cout << tbBorder << endl
-         << padding << endl
-         << "* " << message << " *" << endl
-         << padding << endl
-         << tbBorder << endl << endl;
+    // const string message("Welcome to MnemosyneDB");
+    // const string spaces(message.size(),' ');
+    // const string padding ("* " + spaces + " *");
+    // const string tbBorder(padding.size(),'*');
+    // cout << tbBorder << endl
+    //      << padding << endl
+    //      << "* " << message << " *" << endl
+    //      << padding << endl
+    //      << tbBorder << endl << endl;
     cout << "Program defaults to planning only" << endl;
   }
   bool Execute = false;
   bool WriteToFile = false;
   string FileToWriteTo;
   string TableDir (dbfile_dir);
+  string TPCHDir (tpch_dir);
 
   map<string, Schema> TableToSchema; // table to schema.
   map<string, string> TableToFileName;
   set<string> Tables;
   do
     {
+      cout << "db> ";
 
-
-      cout << "mdb> ";
+      yyparse();
 
       HiResTimer rtt; // time taken before control returned to the user.
       rtt.start();
-
-      yyparse();
 
       if (1 == query)
         {
@@ -622,15 +635,29 @@ int main ()
           PrintNameList(attsToSelect);
 
 
+          auto queryTableNames = GetTableNames(tables); // get the realnames of all the tables we need.
+          // check that all the realnames exist in our set of Tablenames that are available.
+          bool haveTables = true;
+          for(auto it = queryTableNames.begin(); it != queryTableNames.end(); it++)
+            {
+              if (0 == Tables.count(*it))
+                {
+                  clog << "could not find the tables we need to continue" << endl;
+                  haveTables = false;
+                  break;
+                }
+            }
+          cerr << "shit failed??" << endl;
           // need number of tables, and their aliases, in an array. First, the
           // number of tables
-          unsigned const tableCount = NumTables(tables);
+          unsigned const tableCount = queryTableNames.size();//NumTables(tables);
           vector < char * > tblPtrs ;
           cout << "There are " << tableCount << " tables" << endl;
 
           FillTablePtrVector(tables, tblPtrs);
           clog << "size is " << tblPtrs.size();
           assert (tblPtrs.size() == tableCount);
+          clog << "this should print out each cnf clause" << endl;
           for (unsigned i = 0 ; i < tableCount ; i++)
             {
               cerr << tblPtrs[i] << " " << endl;
@@ -638,14 +665,14 @@ int main ()
 
           PrintParseTree(boolean); // cnf
 
-          map<std::string, Schema> schemas = initSchemas();
+          map<std::string, Schema> schemas = TableToSchema;// initSchemas(); // need to put schemas from TableToSchma in here
 
           Statistics s;
           s = initStatistics();
           // s.Write("beforeAlias");
           // s.print();
 
-          CreateTablesAliases(tables,s,schemas); // from clause
+          CreateTablesAliases(tables,s,schemas); // from clause, creates the aliases in the statistics object using copyrel.
           // ReadTablesSchemas(tables, schemaHolder);
 
           cerr << "estimating" << endl;
@@ -851,14 +878,14 @@ int main ()
                   Execute = true;
                   FileToWriteTo = "";
                 }
-              else if (!fileName.empty())
+              else if (!fileName.empty()) // we have a filename. I should probably use an explicit flag here.
                 {
                   clog << "RESULTS TO FILE, EXECUTE." << endl;
                   string fname(fileName);
                   WriteToFile = true;
+                  Execute = true;
                   clog << "FILE IS " << fname << endl;
                   FileToWriteTo = fname;
-                  Execute = true;
                 }
             }
           else if (1 == insertTable) // INSERT 'mytable.tbl' INTO relation
@@ -867,6 +894,19 @@ int main ()
               if(0 == Tables.count(tableName))
                 {
                   cout << "there was no table by that name, doing nothing, try again." << endl;
+                }
+              else
+                {
+                  DBFile dbfile;
+                  char * fname = strdup(TableToFileName[tableName].c_str());
+                  dbfile.Open(fname);
+                  free(fname);
+                  string tableLocation (TPCHDir+fileName);
+                  clog << tableLocation << endl;
+                  fname = strdup(tableLocation.c_str());
+                  dbfile.Load(TableToSchema[tableName],fname);
+                  free(fname);
+                  dbfile.Close();
                 }
             }
           else if (1 == createTable)
@@ -917,6 +957,18 @@ int main ()
           else if (1 == dropTable)
             {
               cout << "drop table" << endl;
+              if(1 == Tables.count(tableName))
+                {
+                  remove(TableToFileName[tableName].c_str()); // remove bin file
+                  remove((TableToFileName[tableName]+".meta").c_str()); // remove bin file
+                  TableToFileName.erase(tableName); // forget about bin file
+                  TableToSchema.erase(tableName); // forget about schema
+                  Tables.erase(tableName); // forget about table
+                }
+              else
+                {
+                  cout << "table doesn't exist, create table first, doing nothing, try again." << endl;
+                }
             }
         }
       else // something else, like quit maybe?

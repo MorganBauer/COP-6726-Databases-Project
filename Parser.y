@@ -138,6 +138,7 @@ SQL: SELECT WhatIWant FROM Tables WHERE AndList
 | DROP TABLE Name
 {
   dropTable = 1;
+  tableName = $3;
 }
 | SET OUTPUT OutSetting
 {
@@ -147,6 +148,7 @@ SQL: SELECT WhatIWant FROM Tables WHERE AndList
 {
   insertTable = 1;
   fileName = $2;
+  tableName = $4;
 }
 | SHUTDOWN
 {

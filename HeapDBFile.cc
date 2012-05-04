@@ -24,7 +24,7 @@ int HeapDBFile::Open (char *f_path)
   return 0;
 }
 
-int HeapDBFile::Create (char *f_path, fType f_type, void *startup)
+int HeapDBFile::Create (char *f_path, fType f_type, void *startup __attribute__ ((__unused__)))
 {
   assert(heap == f_type);
   f.Open(0,f_path);

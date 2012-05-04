@@ -1,7 +1,12 @@
 
 * things to go over with dobra
 project 3. need to be regraded/fixed.
-gla thing
+
+GLA - can demo, etc, works only on my laptop vs on
+storm/thunder. no idea how to link it there. (well, not no idea, some
+idea, just don't want to do it)
+Variadic? I heard someone did that, I want to see.
+
 project. have set up ahead of time.
 
 I have both the linear scan and priority queue and adaptively choose

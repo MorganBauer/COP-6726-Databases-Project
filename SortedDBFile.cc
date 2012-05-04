@@ -36,9 +36,7 @@ int SortedDBFile::Open (char *f_path)
     metafile >> so; // read in ordermaker
     // so.Print();
 
-    fType dbfileType = (fType) t;
     metafile.close();
-    // cout << "file type is " << dbfileType << endl;
   }
 
   filepath = f_path;
@@ -49,7 +47,7 @@ int SortedDBFile::Open (char *f_path)
   return 0;
 }
 
-int SortedDBFile::Create (char *f_path, fType f_type, void *startup)
+int SortedDBFile::Create (char *f_path, fType f_type, void *startup __attribute__ ((__unused__)))
 {
   assert(sorted == f_type);
   // SortInfo si = *((SortInfo *)startup);

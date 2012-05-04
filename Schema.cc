@@ -170,7 +170,7 @@ Schema::Schema(const Schema& s, vector<int> indexesToKeep) : fileName(0)
   return;
 }
 
-Schema::Schema(const Schema& s) : fileName(0), myAtts(0)
+Schema::Schema(const Schema& s) : myAtts(0), fileName(0)
 {
   if (0 != s.fileName)
     fileName = strdup(s.fileName);

@@ -33,9 +33,7 @@ int DBFile::Open (char *f_path)
 
     metafile >> t;
     if(!metafile) return 1;
-    fType dbfileType = (fType) t;
     metafile.close();
-    // cout << "file type is " << dbfileType << endl;
   }
 
   switch(t)
@@ -75,7 +73,7 @@ int DBFile::Create (char *f_path, fType f_type, void *startup) {
         SortInfo si = *((SortInfo *)startup);
         metafile << si.runLength << endl;
         OrderMaker om = *(OrderMaker *)si.myOrder;
-        metafile << om; // write 
+        metafile << om; // write
 
         // om.Print();
       }
