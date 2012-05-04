@@ -1,15 +1,12 @@
+#include "Comparison.h"
 #include <stdio.h>
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
 
-#include "Comparison.h"
-
 
 Comparison::Comparison()
-{
-}
-
+{}
 
 Comparison::Comparison(const Comparison &copy_me)
 {
@@ -62,16 +59,11 @@ void Comparison :: Print () {
 		cout << "(String)";
 }
 
+OrderMaker :: OrderMaker() : numAtts(0)
+{}
 
-
-
-OrderMaker :: OrderMaker() {
-	numAtts = 0;
-}
-
-OrderMaker :: OrderMaker(Schema *schema) {
-	numAtts = 0;
-
+OrderMaker :: OrderMaker(Schema *schema) : numAtts(0)
+ {
 	int n = schema->GetNumAtts();
 	Attribute *atts = schema->GetAtts();
 
@@ -102,6 +94,41 @@ OrderMaker :: OrderMaker(Schema *schema) {
         }
 }
 
+std::ostream& operator<<(std::ostream& os, const OrderMaker& om)
+{
+  os << om.numAtts << endl;
+  // cout << "number of attirbutes is " << om.numAtts << endl;
+
+	for (int i = 0; i < om.numAtts; i++) {
+          // cout << "attr " << i << " "
+          //      << om.whichAtts[i] << " "
+          //      << om.whichTypes[i] << endl;
+
+          os << om.whichAtts[i] << " ";
+          os << om.whichTypes[i] << endl;
+        }
+        return os;
+}
+
+std::istream& operator>>(std::istream& is, OrderMaker& om)
+{
+  is >> om.numAtts;
+  // cout << "number of attirbutes is " << om.numAtts << endl;
+
+	for (int i = 0; i < om.numAtts; i++) {
+          is >> om.whichAtts[i];
+          int t;
+          is >> t;
+          om.whichTypes[i] = (Type)t;
+                        // whichAtts[numAtts] = i;
+			// whichTypes[numAtts] = Int;
+			// numAtts++;
+          // cout << "attr " << i << " "
+          //      << om.whichAtts[i] << " "
+          //      << om.whichTypes[i] << endl;
+        }
+        return is;
+}
 
 void OrderMaker :: Print () {
 	printf("NumAtts = %5d\n", numAtts);
@@ -117,7 +144,13 @@ void OrderMaker :: Print () {
 	}
 }
 
-
+int CNF :: GetSearchOrder(OrderMaker & om)
+{
+  for (int i = 0; i < numAnds ; i++)
+    {
+    }
+  return SUCCESS;
+}
 
 int CNF :: GetSortOrders (OrderMaker &left, OrderMaker &right) {
 
@@ -143,7 +176,7 @@ int CNF :: GetSortOrders (OrderMaker &left, OrderMaker &right) {
 		// now verify that it operates over atts from both tables
 		if (!((orList[i][0].operand1 == Left && orList[i][0].operand2 == Right) ||
 		      (orList[i][0].operand2 == Left && orList[i][0].operand1 == Right))) {
-			continue;		
+			//continue;		
 		}
 
 		// since we are here, we have found a join attribute!!!
@@ -175,7 +208,6 @@ int CNF :: GetSortOrders (OrderMaker &left, OrderMaker &right) {
 	}
 	
 	return left.numAtts;
-
 }
 
 
@@ -607,7 +639,7 @@ void CNF :: GrowFromParseTree (struct AndList *parseTree, Schema *mySchema,
 
 	// and get the record
 	literal.SuckNextRecord (&outSchema, outRecFile);
-
+        literal.Print(&outSchema);
 	// close the record file
 	fclose (outRecFile);
 

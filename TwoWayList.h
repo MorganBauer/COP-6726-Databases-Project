@@ -44,6 +44,7 @@ class TwoWayList {
 
 		TwoWayList (TwoWayList & List);
 	private:
+                TwoWayList operator=(const TwoWayList<Type>&);
 
 		struct Node {
 			// data
@@ -59,6 +60,9 @@ class TwoWayList {
 			{
 				delete data;
 			}
+                private:
+                  Node(const Node &);
+                  Node operator= (const Node &);
 		};
 
 

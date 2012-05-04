@@ -6,7 +6,7 @@
 #include "File.h"
 #include "Comparison.h"
 #include "ComparisonEngine.h"
-
+#include <iostream>
 
 // This stores an individual comparison that is part of a CNF
 class Comparison {
@@ -49,14 +49,18 @@ class OrderMaker {
 	Type whichTypes[MAX_ANDS];
 
 public:
-	
+	// writes out an ordermaker
+        friend std::ostream& operator<<(std::ostream&, const OrderMaker&);
+        // reads into an ordermaker
+        friend std::istream& operator>>(std::istream&, OrderMaker&);
 	// creates an empty OrdermMaker
 	OrderMaker();
 
 	// create an OrderMaker that can be used to sort records
 	// based upon ALL of their attributes
 	OrderMaker(Schema *schema);
-
+        int * GetWhichAtts() {return &whichAtts[0];}
+        int GetNumAtts() {return numAtts;}
 	// print to the screen
 	void Print ();
 };
@@ -71,12 +75,13 @@ class CNF {
 	friend class ComparisonEngine;
 
 	Comparison orList[MAX_ANDS][MAX_ORS];
-	
+
 	int orLens[MAX_ANDS];
 	int numAnds;
 
 public:
 
+        int GetSearchOrder(OrderMaker &);
 	// this returns an instance of the OrderMaker class that
 	// allows the CNF to be implemented using a sort-based
 	// algorithm such as a sort-merge join.  Returns a 0 if and
@@ -90,12 +95,12 @@ public:
         // this takes a parse tree for a CNF and converts it into a 2-D
         // matrix storing the same CNF expression.  This function is applicable
         // specifically to the case where there are two relations involved
-        void GrowFromParseTree (struct AndList *parseTree, Schema *leftSchema, 
+        void GrowFromParseTree (struct AndList *parseTree, Schema *leftSchema,
 		Schema *rightSchema, Record &literal);
 
         // version of the same function, except that it is used in the case of
         // a relational selection over a single relation so only one schema is used
-        void GrowFromParseTree (struct AndList *parseTree, Schema *mySchema, 
+        void GrowFromParseTree (struct AndList *parseTree, Schema *mySchema,
 		Record &literal);
 
 };

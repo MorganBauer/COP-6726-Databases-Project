@@ -1,5 +1,5 @@
-#ifndef DBFILE_H
-#define DBFILE_H
+#ifndef HEAP_DBFILE_H
+#define HEAP_DBFILE_H
 
 #include "TwoWayList.h"
 #include "Record.h"
@@ -9,22 +9,20 @@
 #include "ComparisonEngine.h"
 #include "DBFileDefs.h"
 #include "GenericDBFile.h"
-#include "HeapDBFile.h"
-#include "SortedDBFile.h"
-#include "BPlusDBFile.h"
 
+/* sub class for dbfile impl, supporting linear operations*/
 
-
-class DBFile {
- private:
-
-  GenericDBFile * dbf;
+class HeapDBFile : public GenericDBFile
+{
+  File f;
+  Page curPage;
+  off_t curPageIndex;
 
  public:
-  DBFile ();
+  HeapDBFile ();
 
-  int Create (char *fpath, fType file_type, void *startup);
   int Open (char *fpath);
+  int Create (char *fpath, fType file_type, void *startup);
   int Close ();
 
   void Load (Schema &myschema, char *loadpath);
@@ -33,6 +31,9 @@ class DBFile {
   void Add (Record &addme);
   int GetNext (Record &fetchme);
   int GetNext (Record &fetchme, CNF &cnf, Record &literal);
-
 };
 #endif
+
+
+
+

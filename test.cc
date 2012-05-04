@@ -1,161 +1,741 @@
-#include "test.h"
-#include "BigQ.h"
-#include <pthread.h>
-void test1 ();
-void test2 ();
-void test3 ();
-
-int add_data (FILE *src, int numrecs, int &res) {
-	DBFile dbfile;
-	dbfile.Open (rel->path ());
-	Record temp;
-
-	int proc = 0;
-	int xx = 20000;
-	while ((res = temp.SuckNextRecord (rel->schema (), src)) && ++proc < numrecs) {
-		dbfile.Add (temp);
-		if (proc == xx) cerr << "\t ";
-		if (proc % xx == 0) cerr << ".";
-	}
-
+#include "y.tab.h"
+#include <iostream>
+#include <stdlib.h>
+#include "Statistics.h"
+#include "ParseTree.h"
+#include <math.h>
+#include <cassert>
+extern "C" struct YY_BUFFER_STATE *yy_scan_string(const char*);
+extern "C" int yyparse(void);
+extern struct AndList *final;
 	dbfile.Close ();
 	return proc;
 }
 
-
-// create a dbfile interactively
-void test1 () {
-
-
-	OrderMaker o;
-	rel->get_sort_order (o);
-
-	int runlen = 0;
-	while (runlen < 1) {
-		cout << "\t\n specify runlength:\n\t ";
-		cin >> runlen;
-	}
-	struct {OrderMaker *o; int l;} startup = {&o, runlen};
-
-	DBFile dbfile;
-	cout << "\n output to dbfile : " << rel->path () << endl;
-	dbfile.Create (rel->path(), sorted, &startup);
-	dbfile.Close ();
-
-	char tbl_path[100];
-	sprintf (tbl_path, "%s%s.tbl", tpch_dir, rel->name()); 
-	cout << " input from file : " << tbl_path << endl;
-
-        FILE *tblfile = fopen (tbl_path, "r");
-
-	srand48 (time (NULL));
-
-	int proc = 1, res = 1, tot = 0;
-	while (proc && res) {
-		int x = 0;
-		while (x < 1 || x > 3) {
-			cout << "\n select option for : " << rel->path () << endl;
-			cout << " \t 1. add a few (1 to 1k recs)\n";
-			cout << " \t 2. add a lot (1k to 1e+06 recs) \n";
-			cout << " \t 3. run some query \n \t ";
-			cin >> x;
-		}
-		if (x < 3) {
-			proc = add_data (tblfile,lrand48()%(int)pow(1e3,x)+(x-1)*1000, res);
-			tot += proc;
-			if (proc) 
-				cout << "\n\t added " << proc << " recs..so far " << tot << endl;
-		}
-		else {
-			test3 ();
-		}
-	}
-	cout << "\n create finished.. " << tot << " recs inserted\n";
-	fclose (tblfile);
+void PrintOperand(struct Operand *pOperand)
+{
+  if(pOperand!=NULL)
+    {
+      cout<<pOperand->value<<" ";
+    }
+  else
+    return;
 }
 
-// sequential scan of a DBfile 
-void test2 () {
-
-	cout << " scan : " << rel->path() << "\n";
-	DBFile dbfile;
-	dbfile.Open (rel->path());
-	dbfile.MoveFirst ();
-
-	Record temp;
-
-	int cnt = 0;
-	cerr << "\t";
-	while (dbfile.GetNext (temp) && ++cnt) {
-		temp.Print (rel->schema());
-		if (cnt % 10000) {
-			cerr << ".";
-		}
-	}
-	cout << "\n scanned " << cnt << " recs \n";
-	dbfile.Close ();
+void PrintComparisonOp(struct ComparisonOp *pCom)
+{
+  if(pCom!=NULL)
+    {
+      PrintOperand(pCom->left);
+      switch(pCom->code)
+        {
+        case 1:
+          cout<<" < "; break;
+        case 2:
+          cout<<" > "; break;
+        case 3:
+          cout<<" = ";
+        }
+      PrintOperand(pCom->right);
+    }
+  else
+    {
+      return;
+    }
 }
 
-void test3 () {
+void PrintOrList(struct OrList *pOr)
+{
+  if(pOr !=NULL)
+    {
+      struct ComparisonOp *pCom = pOr->left;
+      PrintComparisonOp(pCom);
 
-	CNF cnf; 
-	Record literal;
-	rel->get_cnf (cnf, literal);
+      if(pOr->rightOr)
+        {
+          cout<<" OR ";
+          PrintOrList(pOr->rightOr);
+        }
+    }
+  else
+    {
+      return;
+    }
+}
 
-	DBFile dbfile;
-	dbfile.Open (rel->path());
-	dbfile.MoveFirst ();
+void PrintAndList(struct AndList *pAnd)
+{
+  if(pAnd !=NULL)
+    {
+      struct OrList *pOr = pAnd->left;
+      PrintOrList(pOr);
+      if(pAnd->rightAnd)
+        {
+          cout<<" AND ";
+          PrintAndList(pAnd->rightAnd);
+        }
+    }
+  else
+    {
+      return;
+    }
+}
 
-	Record temp;
+void PrintParseTree(struct AndList *pAnd)
+{
+  while (pAnd)
+    {
+      struct OrList *pOr = pAnd->left;
+      while (pOr)
+        {
+          struct ComparisonOp *pCom = pOr->left;
+          if (pCom!=NULL)
+            {
+              {
+                struct Operand *pOperand = pCom->left;
+                if(pOperand!=NULL)
+                  {
+                    cout<<pOperand->value<<" ";
+                  }
+              }
+              switch(pCom->code)
+                {
+                case 1:
+                  cout<<" < "; break;
+                case 2:
+                  cout<<" > "; break;
+                case 3:
+                  cout<<" = ";
+                }
+              {
+                struct Operand *pOperand = pCom->right;
+                if(pOperand!=NULL)
+                  {
+                    cout<<pOperand->value<<" ";
+                  }
+              }
+            }
+          if(pOr->rightOr)
+            {
+              cout<<" OR ";
+            }
+          pOr = pOr->rightOr;
+        }
+      if(pAnd->rightAnd)
+        {
+          cout<<" AND ";
+        }
+      pAnd = pAnd->rightAnd;
+    }
+}
 
-	int cnt = 0;
-	cerr << "\t";
-	while (dbfile.GetNext (temp, cnf, literal) && ++cnt) {
-		temp.Print (rel->schema());
-		if (cnt % 10000 == 0) {
-			cerr << ".";
-		}
-	}
-	cout << "\n query over " << rel->path () << " returned " << cnt << " recs\n";
-	dbfile.Close ();
+char *fileName = "Statistics.txt";
+
+void q0 (){
+
+  Statistics s;
+  char *relName[] = {"supplier","partsupp"};
+
+  s.AddRel(relName[0],10000);
+  s.AddAtt(relName[0], "s_suppkey",10000);
+
+  s.AddRel(relName[1],800000);
+  s.AddAtt(relName[1], "ps_suppkey", 10000);
+  cout << "both s and ps added" << endl;
+  char *cnf = "(s_suppkey = ps_suppkey)";
+  //
+  yy_scan_string(cnf);
+  yyparse();
+  PrintAndList(final);
+  cout << endl << "prev was andlist" << endl;
+  PrintParseTree(final);
+  cout << endl << "prev was andlist" << endl;
+  double result = s.Estimate(final, relName, 2);
+  clog << "after estimate, with estimate of " << result << endl;
+  cout << "estimate should be :             800000" << endl;
+  if (result != 800000.0l)
+    cerr<<"error in estimating Q0 before apply " << endl;
+
+  s.Apply(final, relName, 2);
+
+  // test write and read
+  clog << "writing stat to file" << endl;
+  s.Write(fileName);
+  s.print();
+
+  //reload the statistics object from file
+  Statistics s1;
+  clog << "reading stat from file" << endl;
+  s1.Read(fileName);
+  clog << "printing stat from read" << endl;
+  s1.print();
+  // assert(0);
+  cnf = "(s_suppkey>1000)";
+  yy_scan_string(cnf);
+  yyparse();
+  double dummy = s1.Estimate(final, relName, 2);
+
+  clog << "after first estimate, with estimate of " << result << endl;
+  cout << "      first estimate should be :       800000" << endl;
+
+  clog << "second estimate out was   " << dummy << endl;
+  cout << "second estimate should be " << result/3.0 << endl;
+  if(fabs(dummy*3.0-result) >0.1)
+    {
+      cout<<"Read or write or last apply is not correct\n";
+    }
+}
+
+void q1 () // pure select
+{
+  Statistics s;
+  char *relName[] = {"lineitem"};
+
+  s.AddRel(relName[0],6001215);
+  s.AddAtt(relName[0], "l_returnflag" ,3);
+  s.AddAtt(relName[0], "l_discount"   ,11);
+  s.AddAtt(relName[0], "l_shipmode"   ,7);
+
+  char *cnf = "(l_returnflag = 'R') AND (l_discount < 0.04 OR l_shipmode = 'MAIL')";
+  //      ltuples / distinct(rflag)  *           1/3       +      1 / distinct(rflag)
+  //                6001215/3        * (1-    (1-(1/3))             (1- (1/7)))
+  //              2000405            * (1-      (2/3)                 (6/7))
+  //              2000405            *                 (1- (4/7))
+  //              2000405            *                   (3/7)
+  //                           857316.428571
+  yy_scan_string(cnf);
+  yyparse();
+
+  PrintAndList(final);
+  cout << endl << "prev was andlist" << endl;
+  PrintParseTree(final);
+  cout << endl << "prev was parsetree" << endl;
+
+  double result = s.Estimate(final, relName, 1);
+  cout<<"Your estimation Result  " << scientific << result << endl;
+  cout<<" Correct Answer:        8.5732e+5" << endl;
+  cerr << "" << endl;
+
+  s.Apply(final, relName, 1);
+
+  // test write and read
+  s.Write(fileName);
+
+  cout<<"Your estimation Result  " << scientific << result << endl;
+  cout<<" Correct Answer:        8.5732e+5" << endl;
+  cerr << "" << endl;
+}
+
+void q2 (){
+
+  Statistics s;
+  char *relName[] = {"orders","customer","nation"};
+
+
+  s.AddRel(relName[0],1500000);
+  s.AddAtt(relName[0], "o_custkey",150000);
+
+  s.AddRel(relName[1],150000);
+  s.AddAtt(relName[1], "c_custkey",150000);
+  s.AddAtt(relName[1], "c_nationkey",25);
+
+  s.AddRel(relName[2],25);
+  s.AddAtt(relName[2], "n_nationkey",25);
+
+  char *cnf = "(c_custkey = o_custkey)";
+  //               join
+  //          150k*1.5mil /(150k) = 1.5mil
+  yy_scan_string(cnf);
+  yyparse();
+
+  // Join the first two relations in relName
+  s.Apply(final, relName, 2);
+
+  cnf = " (c_nationkey = n_nationkey)";
+  //          join
+  //          1.5mil*25/(25) = 1.5mil
+  yy_scan_string(cnf);
+  yyparse();
+
+  double result = s.Estimate(final, relName, 3);
+
+  if(fabs(result-1500000)>0.1)
+    cout<<"error in estimating Q2" << endl;
+  s.Apply(final, relName, 3);
+
+  s.Write(fileName);
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        1500000" << endl;
+  cerr << "" << endl;
+
 
 }
 
-int main (int argc, char *argv[]) {
+// Note there is a self join
+void q3 (){
 
-	setup ();
+  Statistics s;
+  char *relName[] = {"supplier","customer","nation"};
 
-	relation *rel_ptr[] = {n, r, c, p, ps, s, o, li};
-	void (*test_ptr[]) () = {&test1, &test2, &test3};  
-	void (*test) ();
+  s.Read(fileName);
 
-	int tindx = 0;
-	while (tindx < 1 || tindx > 3) {
-		cout << " select test option: \n";
-		cout << " \t 1. create sorted dbfile\n";
-		cout << " \t 2. scan a dbfile\n";
-		cout << " \t 3. run some query \n \t ";
-		cin >> tindx;
-	}
+  s.AddRel(relName[0],10000);
+  s.AddAtt(relName[0], "s_nationkey",25);
 
-	int findx = 0;
-	while (findx < 1 || findx > 8) {
-		cout << "\n select table: \n";
-		cout << "\t 1. nation \n";
-		cout << "\t 2. region \n";
-		cout << "\t 3. customer \n";
-		cout << "\t 4. part \n";
-		cout << "\t 5. partsupp \n";
-		cout << "\t 6. supplier \n";
-		cout << "\t 7. orders \n";
-		cout << "\t 8. lineitem \n \t ";
-		cin >> findx;
-	}
-	rel = rel_ptr [findx - 1];
+  s.AddRel(relName[1],150000);
+  s.AddAtt(relName[1], "c_custkey",150000);
+  s.AddAtt(relName[1], "c_nationkey",25);
 
-	test = test_ptr [tindx-1];
-	test ();
+  s.AddRel(relName[2],25);
+  s.AddAtt(relName[2], "n_nationkey",25);
 
-	cleanup ();
-	cout << "\n\n";
+  s.CopyRel("nation","n1");
+  s.CopyRel("nation","n2");
+  s.CopyRel("supplier","s");
+  s.CopyRel("customer","c");
+
+  char *set1[] ={"s","n1"};
+  char *cnf = "(s.s_nationkey = n1.n_nationkey)";
+  // pure join
+  // 10k*25/25 = 10k
+  yy_scan_string(cnf);
+  yyparse();
+  s.Apply(final, set1, 2);
+
+  char *set2[] ={"c","n2"};
+  cnf = "(c.c_nationkey = n2.n_nationkey)";
+  // pure join
+  // 150k*25/25 = 150k
+  yy_scan_string(cnf);
+  yyparse();
+  s.Apply(final, set2, 2);
+
+  char *set3[] = {"c","s","n1","n2"};
+  cnf = " (n1.n_nationkey = n2.n_nationkey )";
+  // join of the previous two joins
+  // 10k * 150k / 25 = 60mil
+  yy_scan_string(cnf);
+  yyparse();
+
+  double result = s.Estimate(final, set3, 4);
+  if(fabs(result-60000000.0)>0.1)
+    cout<<"error in estimating Q3\n";
+
+  s.Apply(final, set3, 4);
+
+  s.Write(fileName);
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        6e  7 or 60000000" << endl;
+  cerr << "" << endl;
+
+}
+
+
+void q4 (){
+
+  Statistics s;
+  char *relName[] = { "part", "partsupp", "supplier", "nation", "region"};
+
+  s.AddRel(relName[0],200000);
+  s.AddAtt(relName[0], "p_partkey",200000);
+  s.AddAtt(relName[0], "p_size",50);
+
+  s.AddRel(relName[1], 800000);
+  s.AddAtt(relName[1], "ps_suppkey",10000);
+  s.AddAtt(relName[1], "ps_partkey", 200000);
+
+  s.AddRel(relName[2],10000);
+  s.AddAtt(relName[2], "s_suppkey",10000);
+  s.AddAtt(relName[2], "s_nationkey",25);
+
+  s.AddRel(relName[3],25);
+  s.AddAtt(relName[3], "n_nationkey",25);
+  s.AddAtt(relName[3], "n_regionkey",5);
+
+  s.AddRel(relName[4],5);
+  s.AddAtt(relName[4], "r_regionkey",5);
+  s.AddAtt(relName[4], "r_name",5);
+
+  s.CopyRel("part","p");
+  s.CopyRel("partsupp","ps");
+  s.CopyRel("supplier","s");
+  s.CopyRel("nation","n");
+  s.CopyRel("region","r");
+
+
+  char *relName2[] = { "p", "ps", "s", "n", "r"};
+
+  char *cnf = "(p.p_partkey=ps.ps_partkey) AND (p.p_size = 2)";
+  //            first       join               equality selection
+  //             200k*800k/200k             *    1/50
+  //                                     800k/50
+  //                                       16k
+  yy_scan_string(cnf);
+  yyparse();
+  s.Apply(final, relName2, 2);
+
+  cnf ="(s.s_suppkey = ps.ps_suppkey)";
+  //        join, of already joined
+  //           10k*16k/10k = 16k
+  yy_scan_string(cnf);
+  yyparse();
+  s.Apply(final, relName2, 3);
+
+  cnf =" (s.s_nationkey = n.n_nationkey)";
+  //          third join of already joined
+  //          16k* 25/25 = 16k
+  yy_scan_string(cnf);
+  yyparse();
+  s.Apply(final, relName2, 4);
+
+  cnf ="(n.n_regionkey = r.r_regionkey) AND (r.r_name = 'AMERICA') ";
+  // fourth join of already joined       and    a selection of particular nation by name
+  //           16k *5/5                  *      1/5
+  //                                3200
+  yy_scan_string(cnf);
+  yyparse();
+
+  double result = s.Estimate(final, relName2, 5);
+  if(fabs(result-3200)>0.1)
+    cout<<"error in estimating Q4\n";
+
+  s.Apply(final, relName, 5);
+
+  s.Write(fileName);
+
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        3200" << endl;
+  cerr << "" << endl;
+
+
+}
+
+void q5 (){
+
+  Statistics s;
+  char *relName[] = { "customer", "orders", "lineitem"};
+
+  s.AddRel(relName[0],150000);
+  s.AddAtt(relName[0], "c_custkey",150000);
+  s.AddAtt(relName[0], "c_mktsegment",5);
+
+  s.AddRel(relName[1],1500000);
+  s.AddAtt(relName[1], "o_orderkey",1500000);
+  s.AddAtt(relName[1], "o_custkey",150000);
+  s.AddAtt(relName[1], "o_orderdate",-1);
+
+  s.AddRel(relName[2],6001215);
+  s.AddAtt(relName[2], "l_orderkey",1500000);
+
+
+  char *cnf = "(c_mktsegment = 'BUILDING')  AND (c_custkey = o_custkey)  AND (o_orderdate < '1995-03-1')";
+  yy_scan_string(cnf);
+  yyparse();
+  s.Apply(final, relName, 2);
+
+
+  cnf = " (l_orderkey = o_orderkey) ";
+  yy_scan_string(cnf);
+  yyparse();
+
+
+  double result = s.Estimate(final, relName, 3);
+
+  if(fabs(result-400081)>0.1)
+    cout<<"error in estimating Q5\n";
+
+  s.Apply(final, relName, 3);
+
+  s.Write(fileName);
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        400081" << endl;
+  cerr << "" << endl;
+
+}
+
+void q6 (){
+
+  Statistics s;
+  char *relName[] = { "partsupp", "supplier", "nation"};
+  remove("Statistics.txt");
+  s.Read(fileName);
+
+  s.AddRel(relName[0],800000);
+  s.AddAtt(relName[0], "ps_suppkey",10000);
+
+  s.AddRel(relName[1],10000);
+  s.AddAtt(relName[1], "s_suppkey",10000);
+  s.AddAtt(relName[1], "s_nationkey",25);
+
+  s.AddRel(relName[2],25);
+  s.AddAtt(relName[2], "n_nationkey",25);
+  s.AddAtt(relName[2], "n_name",25);
+
+
+  char *cnf = " (s_suppkey = ps_suppkey) ";
+  yy_scan_string(cnf);
+  yyparse();
+  s.Apply(final, relName, 2);
+
+  cnf = " (s_nationkey = n_nationkey)  AND (n_name = 'AMERICA')   ";
+  yy_scan_string(cnf);
+  yyparse();
+
+  double result = s.Estimate(final, relName, 3);
+
+  if(fabs(result-32000)>0.1)
+    cout<<"error in estimating Q6\n";
+  s.Apply(final, relName, 3);
+  s.Write(fileName);
+
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        32000" << endl;
+  cerr << "" << endl;
+
+}
+
+void q7(){
+
+  Statistics s;
+  char *relName[] = { "orders", "lineitem"};
+  remove("Statistics.txt");
+  s.Read(fileName);
+
+
+  s.AddRel(relName[0],1500000);
+  s.AddAtt(relName[0], "o_orderkey",1500000);
+
+
+  s.AddRel(relName[1],6001215);
+  s.AddAtt(relName[1], "l_orderkey",1500000);
+  s.AddAtt(relName[1], "l_receiptdate",-1); // this was missing
+
+  char *cnf = "(l_receiptdate >'1995-02-01' ) AND (l_orderkey = o_orderkey)";
+  yy_scan_string(cnf);
+  yyparse();
+  double result = s.Estimate(final, relName, 2);
+
+  if(fabs(result-2000405)>0.1)
+    cout<<"error in estimating Q7\n";
+
+  s.Apply(final, relName, 2);
+  s.Write(fileName);
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        2000405" << endl;
+  cerr << "" << endl;
+
+}
+
+// Note  OR conditions are not independent.
+void q8 (){
+
+  Statistics s;
+  char *relName[] = { "part",  "partsupp"};
+
+  //  s.Read(fileName);
+
+  s.AddRel(relName[0],200000);
+  s.AddAtt(relName[0], "p_partkey",200000);
+  s.AddAtt(relName[0], "p_size",50);
+
+  s.AddRel(relName[1],800000);
+  s.AddAtt(relName[1], "ps_partkey",200000);
+
+
+  char *cnf = "(p_partkey=ps_partkey) AND (p_size =3 OR p_size=6 OR p_size =19)";
+  // p_size*ps_size / max(p_pk,ps_pk)  *     1/50    +    1/50   +    1/50
+  //     200k*800k/max(200k,200k)      *                  3/50
+  //          160,000k/200k            *                  3/50
+  //               800k                *                  3/50
+  //                                  48k
+  yy_scan_string(cnf);
+  yyparse();
+
+
+  double result = s.Estimate(final, relName,2);
+
+  if(fabs(result-48000)>0.1)
+    cout<<"error in estimating Q8\n";
+
+  s.Apply(final, relName,2);
+
+  s.Write(fileName);
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        48000" << endl;
+  cerr << "" << endl;
+
+}
+void q9(){
+
+  Statistics s;
+  char *relName[] = { "part",  "partsupp","supplier"};
+
+
+  s.AddRel(relName[0],200000);
+  s.AddAtt(relName[0], "p_partkey",200000);
+  s.AddAtt(relName[0], "p_name", 199996);
+
+  s.AddRel(relName[1],800000);
+  s.AddAtt(relName[1], "ps_partkey",200000);
+  s.AddAtt(relName[1], "ps_suppkey",10000);
+
+  s.AddRel(relName[2],10000);
+  s.AddAtt(relName[2], "s_suppkey",10000);
+
+  char *cnf = "(p_partkey=ps_partkey) AND (p_name = 'dark green antique puff wheat') ";
+  yy_scan_string(cnf);
+  yyparse();
+  s.Apply(final, relName,2);
+
+  cnf = " (s_suppkey = ps_suppkey) ";
+  yy_scan_string(cnf);
+  yyparse();
+
+  double result = s.Estimate(final, relName,3);
+  if(fabs(result-4)>0.5)
+    cout<<"error in estimating Q9\n";
+
+  s.Apply(final, relName,3);
+
+  s.Write(fileName);
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        4" << endl;
+  cerr << "" << endl;
+
+
+}
+
+void q10 (){
+
+  Statistics s;
+  char *relName[] = { "customer", "orders", "lineitem","nation"};
+  remove(fileName);
+  s.Read(fileName);
+
+  s.AddRel(relName[0],150000);
+  s.AddAtt(relName[0], "c_custkey",150000);
+  s.AddAtt(relName[0], "c_nationkey",25);
+
+  s.AddRel(relName[1],1500000);
+  s.AddAtt(relName[1], "o_orderkey",1500000);
+  s.AddAtt(relName[1], "o_custkey",150000);
+  s.AddAtt(relName[1], "o_orderdate",-1);
+
+  s.AddRel(relName[2],6001215);
+  s.AddAtt(relName[2], "l_orderkey",1500000);
+
+  s.AddRel(relName[3],25);
+  s.AddAtt(relName[3], "n_nationkey",25);
+
+  char *cnf = "(c_custkey = o_custkey)  AND (o_orderdate > '1994-01-23') ";
+  //                    join                     inequality select
+  //             150k*1.5mil/150k        *      1/3
+  //                 1.5 mil             *   1/3
+  //                            500k
+  yy_scan_string(cnf);
+  yyparse();
+  s.Apply(final, relName, 2);
+
+  cnf = " (l_orderkey = o_orderkey) ";
+  //         join of already joined
+  //          6mil * 500k / 1.5mil = 2mil
+  //             2000405
+  yy_scan_string(cnf); yyparse();
+
+  s.Apply(final, relName, 3);
+
+  cnf = "(c_nationkey = n_nationkey) ";
+  //         join of already joined
+  //          2000405*25/25
+  //             2000405
+  yy_scan_string(cnf); yyparse();
+
+  double result = s.Estimate(final, relName, 4);
+  if(fabs(result-2000405)>0.1)
+    cout<<"error in estimating Q10\n";
+
+  s.Apply(final, relName, 4);
+
+  s.Write(fileName);
+
+  cout<<"Your estimation Result  " << result << endl;
+  cout<<" Correct Answer:        2000405" << endl;
+  cerr << "" << endl;
+
+}
+
+void q11 (){
+
+  Statistics s;
+  char *relName[] = { "part",  "lineitem"};
+
+  // s.Read(fileName); // UNCOMMENT LATER TODO XXX
+
+  s.AddRel(relName[0],200000);
+  s.AddAtt(relName[0], "p_partkey",200000);
+  s.AddAtt(relName[0], "p_container",40);
+
+  s.AddRel(relName[1],6001215);
+  s.AddAtt(relName[1], "l_partkey",200000);
+  s.AddAtt(relName[1], "l_shipinstruct",4);
+  s.AddAtt(relName[1], "l_shipmode",7);
+
+  char *cnf = "(l_partkey = p_partkey) AND (l_shipmode = 'AIR' OR l_shipmode = 'AIR REG') AND (p_container ='SM BOX' OR p_container = 'SM PACK')  AND (l_shipinstruct = 'DELIVER IN PERSON')";
+  //            equality join           *          dependent or                            *             dependent or                              *    single equality
+  //             6mil                   *  (1-    (1- (1/7))            (1- (1/7)))        *  (1-   (1-(1/40))               (1-(1/40)))           *     6mil/4
+  //             6mil                   *  (1-    (6/7)                   (6/7))           *  (1-   (39/40)                   (39/40))             *     1500303.75
+  //             6mil                   *  (1-                  36/49)                     *  (1-                   1521/1600)                     *     1500303.75
+  //             6mil                   *                       13/49                      *                          79/1600                      *     1500303.75
+
+  yy_scan_string(cnf);
+  yyparse();
+
+  PrintAndList(final);
+  cout << endl << "prev was andlist" << endl;
+  PrintParseTree(final);
+  cout << endl << "prev was parsetree" << endl;
+
+  double result = s.Estimate(final, relName,2);
+
+  cout << "estimate of        " << result << endl;
+  cout << "estimate should be 21432.9" << endl;
+
+  if(fabs(result-21432.9)>0.5)
+    cout<<"error in estimating Q11" << endl;
+  s.Apply(final, relName,2);
+
+  s.Write(fileName);
+
+  cout << "estimate of        " << result << endl;
+  cout << "estimate should be 21432.9" << endl;
+}
+
+int main(int argc, char *argv[]) {
+  if (argc < 2) {
+    cerr << "You need to supply me the query number to run as a command-line arg.." << endl;
+    cerr << "Usage: ./test.out [0-11] >" << endl;
+    exit (1);
+  }
+
+  void (*query_ptr[]) () = {&q0,&q1, &q2, &q3, &q4, &q5, &q6, &q7, &q8,&q9,&q10,&q11};
+  void (*query) ();
+  int qindx = atoi (argv[1]);
+
+  if (qindx >=0 && qindx < 12) {
+    query = query_ptr [qindx ];
+    query ();
+    cout << "\n\n";
+  }
+  else {
+    cout << " ERROR!!!!\n";
+  }
+
 }

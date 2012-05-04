@@ -2,7 +2,7 @@
  * SECTION 1
  ***********************************************************************/
 /* The code in %{ %} is included as it is in lex.yy.c file
- * it has C global variables, prototypes, and comments 
+ * it has C global variables, prototypes, and comments
  */
 
 
@@ -35,41 +35,118 @@ void yyerror(char*s);
 
 %%
 
-"("			return('(');
+"CREATE"                return (CREATE);
 
-")"    	        	return(')');
+"DROP"                  return (DROP);
 
-"<"    		      	return('<');
+"UPDATE"                return (UPDATE);
 
-">"    		 	return('>');
+"STATISTICS"            return (STATISTICS);
 
-"=" 			return('=');
+"SHUTDOWN"              return (SHUTDOWN);
 
--?[0-9]+ 	       {yylval.actualChars = strdup(yytext);
-  			return(Int); 
-		        }
+"TABLE"                 return (TABLE);
 
--?[0-9]+\.[0-9]*       {yylval.actualChars = strdup(yytext); 
-  			return(Float);
-			}
+"DOUBLE"                return (FLOAT_ATTR);
 
-"OR"      		return(OR);
+"INTEGER"               return (INTEGER_ATTR);
+
+"STRING"                return (STRING_ATTR);
+
+"HEAP"                  return (HEAP);
+
+"SORTED"                return (SORTED);
+
+"ON"                    return (ON);
+
+"SET"                   return (SET);
+
+"OUTPUT"                return (OUTPUT);
+
+"STDOUT"                return (STDOUT);
+
+"NONE"                  return (NONE);
+
+"INSERT"                return (INSERT);
+
+"INTO"                  return (INTO);
+
+"SELECT"		return(SELECT);
+
+"FROM"			return(FROM);
+
+"WHERE"			return(WHERE);
+
+"SUM"			return(SUM);
 
 "AND"			return(AND);
 
-\'[^'\n]*\' 	       {/* take care of ' in a string */
-	 		if (yytext[yyleng - 2] == '\\') {
-     				yymore();
-   			} else {
-				yylval.actualChars = strdup(yytext + 1);	
-				yylval.actualChars[strlen(yylval.actualChars) - 1] = 0;
-     				return(String);
-   			}
+"GROUP"			return(GROUP);
+
+"DISTINCT"		return(DISTINCT);
+
+"BY"			return(BY);
+
+"OR"			return(OR);
+
+"AS"			return(AS);
+
+"("			return('(');
+
+"<"                     return('<');
+
+">"                     return('>');
+
+"="                     return('=');
+
+")"    	        	return(')');
+
+"+"    	        	return('+');
+
+"-"    	        	return('-');
+
+"/"    	        	return('/');
+
+"*"    	        	return('*');
+
+","    	        	return(',');
+
+";"    	        	return(';');
+
+-?[0-9]+ 	       {yylval.actualChars = strdup(yytext);
+  			return(Int);
+		        }
+
+-?[0-9]+\.[0-9]*       {yylval.actualChars = strdup(yytext);
+  			return(Float);
 			}
 
 [A-Za-z][A-Za-z0-9_-]* {yylval.actualChars = strdup(yytext);
   			return(Name);
-			}     
+			}
+
+[A-Za-z][A-Za-z0-9_-]*\.[A-Za-z][A-Za-z0-9_-]* {yylval.actualChars = strdup(yytext);
+  			return(Name);
+			}
+
+\'[A-Za-z0-9_\/\.]+\' {yylval.actualChars = strdup(yytext + 1);
+                       if (yylval.actualChars[yyleng-2] != '\'')
+                           yyerror("LEX_ERROR: improperly terminated string");
+                       else
+                           yylval.actualChars[yyleng-2] = 0;
+                       // printf("found ### %s ###\n", yylval.actualChars);
+                       return(FilePath);
+                       }
+
+\'[^'\n]*\'            {/* take care of ' in a string */
+                        if (yytext[yyleng - 2] == '\\') {
+                                yymore();
+                        } else {
+                                yylval.actualChars = strdup(yytext + 1);
+                                yylval.actualChars[strlen(yylval.actualChars) - 1] = 0;
+                                return(String);
+                        }
+                        }
 
 \n                	lineno++;
 

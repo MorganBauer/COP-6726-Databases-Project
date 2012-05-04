@@ -17,7 +17,9 @@ private:
 	
 	int numRecs;
 	int curSizeInBytes;
-
+        
+        Page(const Page &);
+        Page operator=(const Page &);
 public:
 	// constructor
 	Page ();
@@ -35,7 +37,7 @@ public:
 	int GetFirst (Record *firstOne);
 
 	// this appends the record to the end of a page.  The return value
-	// is a one on success and a aero if there is no more space
+	// is a one on success and a zero if there is no more space
 	// note that the record is consumed so it will have no value after
 	int Append (Record *addMe);
 
@@ -48,8 +50,8 @@ public:
 class File {
 private:
 
-	int myFilDes;
-	off_t curLength; 
+  int myFilDes; // file descriptor 
+  off_t curLength; // current length of file
 
 public:
 
@@ -64,7 +66,9 @@ public:
 	// the file; if notNew is zero, then the file is created and any other
 	// file located at that location is erased.  Otherwise, the file is
 	// simply opened
-	void Open (int length, char *fName);
+	void Open (int length, const char *fName);
+
+	void TempOpen (char *fName);
 
 	// allows someone to explicitly get a specified page from the file
 	void GetPage (Page *putItHere, off_t whichPage);
@@ -74,11 +78,10 @@ public:
 	// are before the page to be written are zeroed out
 	void AddPage (Page *addMe, off_t whichPage);
 
+        void Append (Page *addMe);
 	// closes the file and returns the file length (in number of pages)
 	int Close ();
 
 };
-
-
 
 #endif
