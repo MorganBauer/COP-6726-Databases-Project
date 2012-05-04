@@ -29,7 +29,7 @@ struct FuncOperator {
 	// these are the operators on the left and on the right
 	struct FuncOperator *leftOperator;
 	struct FuncOperand *leftOperand;
-	struct FuncOperator *right;	
+	struct FuncOperator *right;
 
 };
 
@@ -54,11 +54,21 @@ struct NameList {
 	struct NameList *next;
 };
 
+struct AttrList {
+
+	// this is the name
+	char *name;
+
+	// and this is the next name in the list
+	struct NameList *next;
+};
+
+
 // used in boolean expressions... there's no reason to have both this
 // and FuncOperand, but both are here for legacy reasons!!
 struct Operand {
 
-        // this tells us the type of the operand: FLOAT, INT, STRING...
+        // this tells us the type of the operand: FLOAT, INT, TSRING...
         int code;
 
         // this is the actual operand

@@ -1,44 +1,58 @@
 
 %{
+#include "ParseTree.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <iostream>
+#include <string>
+#include <vector>
 
-	#include "ParseTree.h"
-	#include <stdio.h>
-	#include <string.h>
-	#include <stdlib.h>
-	#include <iostream>
+  using namespace std;
 
-	extern "C" int yylex();
-	extern "C" int yyparse();
-	extern "C" void yyerror(char *s);
+  extern "C" int yylex();
+  extern "C" int yyparse();
+  extern "C" void yyerror(char *s);
 
-	// these data structures hold the result of the parsing
-	struct FuncOperator *finalFunction; // the aggregate function (NULL if no agg)
-	struct TableList *tables; // the list of tables and aliases in the query
-	struct AndList *boolean; // the predicate in the WHERE clause
-	struct NameList *groupingAtts; // grouping atts (NULL if no grouping)
-	struct NameList *attsToSelect; // the set of attributes in the SELECT (NULL if no such atts)
-	int distinctAtts; // 1 if there is a DISTINCT in a non-aggregate query
-	int distinctFunc;  // 1 if there is a DISTINCT in an aggregate query
-        int query;
-        // maintenance commands
-        int outputChange;
-        int planOnly; // 1 if we are changing settings to planning only. Do not execute.
-        int setStdOut;
-        char * outName;
-%}
+  // these data structures hold the result of the parsing
+  struct FuncOperator *finalFunction = 0; // the aggregate function (NULL if no agg)
+  struct TableList *tables = 0; // the list of tables and aliases in the query
+  struct AndList *boolean = 0; // the predicate in the WHERE clause
+  struct NameList *groupingAtts = 0; // grouping atts (NULL if no grouping)
+  struct NameList *attsToSelect = 0; // the set of attributes in the SELECT (NULL if no such atts)
+  int distinctAtts = 0; // 1 if there is a DISTINCT in a non-aggregate query
+  int distinctFunc = 0; // 1 if there is a DISTINCT in an aggregate query
+  int query = 0;
+  // maintenance commands
+  // CREAT
+  int createTable = 0; // 1 if the SQL is create table
+  int tableType = 0; // 1 for heap, 2 for sorted.
+  // INSERT
+  int insertTable = 0; // 1 if the command is Insert into table
+  int dropTable = 0; // 1 is the command is Drop table
+  // SET command
+  int outputChange = 0;
+  int planOnly = 0; // 1 if we are changing settings to planning only. Do not execute.
+  int setStdOut = 0;
+
+  bool keepGoing = true;
+  // this is used for both input and output file names. A copy is made inside the database.
+  string fileName;
+  %}
 
 // this stores all of the types returned by production rules
 %union {
- 	struct FuncOperand *myOperand;
-	struct FuncOperator *myOperator;
-	struct TableList *myTables;
-	struct ComparisonOp *myComparison;
-	struct Operand *myBoolOperand;
-	struct OrList *myOrList;
-	struct AndList *myAndList;
-	struct NameList *myNames;
-	char *actualChars;
-	char whichOne;
+  struct FuncOperand *myOperand;
+  struct FuncOperator *myOperator;
+  struct TableList *myTables;
+  struct ComparisonOp *myComparison;
+  struct Operand *myBoolOperand;
+  struct OrList *myOrList;
+  struct AndList *myAndList;
+  struct NameList *myNames;
+  struct AttrList *myAttrs;
+  char *actualChars;
+  char whichOne;
 }
 
 %token <actualChars> FilePath
@@ -83,69 +97,78 @@
 %start SQL
 
 
-//******************************************************************************
-// SECTION 3
-//******************************************************************************
-/* This is the PRODUCTION RULES section which defines how to "understand" the
- * input language and what action to take for each "statment"
- */
+ //******************************************************************************
+ // SECTION 3
+ //******************************************************************************
+ /* This is the PRODUCTION RULES section which defines how to "understand" the
+  * input language and what action to take for each "statment"
+  */
 
 %%
 
 SQL: SELECT WhatIWant FROM Tables WHERE AndList
 {
   query = 1;
-	tables = $4;
-	boolean = $6;
-	groupingAtts = NULL;
-        outName = 0;
-}
+  tables = $4;
+  boolean = $6;
+  groupingAtts = NULL;
+  }
 
 | SELECT WhatIWant FROM Tables WHERE AndList GROUP BY Atts
 {
   query = 1;
-	tables = $4;
-	boolean = $6;
-	groupingAtts = $9;
-        outName = 0;
-}
+  tables = $4;
+  boolean = $6;
+  groupingAtts = $9;
+  }
+| CREATE TABLE Table '(' AttrList ')' AS DBFileType
+{
 
-| CREATE TABLE Table '(' AttrList ')' AS HEAP ';'
+  createTable = 1;
+  }
+| DROP TABLE Table
 {
-  query = 0;
-  outName = 0;
-}
-| CREATE TABLE Table '(' AttrList ')' AS SORTED ON Atts ';'
+    dropTable = 1;
+  }
+| SET OUTPUT OutSetting
 {
-  query = 0;
-  outName = 0;
+    outputChange = 1;
 }
-| DROP TABLE Table';'
+| INSERT FilePath INTO Table
 {
-  query = 0;
-  outName = 0;
+    insertTable = 1;
+    fileName = $2;
 }
-| SET OUTPUT OutSetting ';'
+| SHUTDOWN
 {
-  query = 0;
-  outputChange = 1;
+  keepGoing = false;
+};
+
+DBFileType : HEAP
+{
+  tableType = 1;
 }
-| INSERT FilePath INTO Table ';'
-{};
+| SORTED ON Atts
+{
+  tableType = 2;
+};
 
 OutSetting: STDOUT
 {
   setStdOut = 1;
+  fileName = "";
 }
 | NONE
 {
   planOnly = 1;
+  fileName = "";
 }
 | FilePath
 {
-  outName = $1;
-  printf("found ### %s ###\n", $1);
-  printf("%p\n", $1);
+  string fn($1);
+  fileName = $1;
+  // printf("found ### %s ###\n", $1);
+  // printf("%p\n", $1);
 };
 
 Table: Name
@@ -153,7 +176,6 @@ Table: Name
 
 AttrList: Attribute AttrType ',' AttrList // non terminal type, more than one attribute
 {}
-
 | Attribute AttrType // final attribute in list
 {};
 
@@ -169,245 +191,245 @@ AttrType : INTEGER_ATTR
 
 WhatIWant: Function ',' Atts
 {
-	attsToSelect = $3;
-	distinctAtts = 0;
+  attsToSelect = $3;
+  distinctAtts = 0;
 }
 
 | Function
 {
-	attsToSelect = NULL;
+  attsToSelect = NULL;
 }
 
 | Atts
 {
-	distinctAtts = 0;
-	finalFunction = NULL;
-	attsToSelect = $1;
+  distinctAtts = 0;
+  finalFunction = NULL;
+  attsToSelect = $1;
 }
 
 | DISTINCT Atts
 {
-	distinctAtts = 1;
-	finalFunction = NULL;
-	attsToSelect = $2;
-	finalFunction = NULL;
+  distinctAtts = 1;
+  finalFunction = NULL;
+  attsToSelect = $2;
+  finalFunction = NULL;
 };
 
 Function: SUM '(' CompoundExp ')'
 {
-	distinctFunc = 0;
-	finalFunction = $3;
+  distinctFunc = 0;
+  finalFunction = $3;
 }
 
 | SUM DISTINCT '(' CompoundExp ')'
 {
-	distinctFunc = 1;
-	finalFunction = $4;
+  distinctFunc = 1;
+  finalFunction = $4;
 };
 
 Atts: Name
 {
-	$$ = (struct NameList *) malloc (sizeof (struct NameList));
-	$$->name = $1;
-	$$->next = NULL;
+  $$ = (struct NameList *) malloc (sizeof (struct NameList));
+  $$->name = $1;
+  $$->next = NULL;
 }
 
 | Atts ',' Name
 {
-	$$ = (struct NameList *) malloc (sizeof (struct NameList));
-	$$->name = $3;
-	$$->next = $1;
+  $$ = (struct NameList *) malloc (sizeof (struct NameList));
+  $$->name = $3;
+  $$->next = $1;
 }
 
 Tables: Name AS Name
 {
-	$$ = (struct TableList *) malloc (sizeof (struct TableList));
-	$$->tableName = $1;
-	$$->aliasAs = $3;
-	$$->next = NULL;
+  $$ = (struct TableList *) malloc (sizeof (struct TableList));
+  $$->tableName = $1;
+  $$->aliasAs = $3;
+  $$->next = NULL;
 }
 
 | Tables ',' Name AS Name
 {
-	$$ = (struct TableList *) malloc (sizeof (struct TableList));
-	$$->tableName = $3;
-	$$->aliasAs = $5;
-	$$->next = $1;
+  $$ = (struct TableList *) malloc (sizeof (struct TableList));
+  $$->tableName = $3;
+  $$->aliasAs = $5;
+  $$->next = $1;
 }
 
 
 
 CompoundExp: SimpleExp Op CompoundExp
 {
-	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
-	$$->leftOperator = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
-	$$->leftOperator->leftOperator = NULL;
-	$$->leftOperator->leftOperand = $1;
-	$$->leftOperator->right = NULL;
-	$$->leftOperand = NULL;
-	$$->right = $3;
-	$$->code = $2;
+  $$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
+  $$->leftOperator = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
+  $$->leftOperator->leftOperator = NULL;
+  $$->leftOperator->leftOperand = $1;
+  $$->leftOperator->right = NULL;
+  $$->leftOperand = NULL;
+  $$->right = $3;
+  $$->code = $2;
 
 }
 
 | '(' CompoundExp ')' Op CompoundExp
 {
-	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
-	$$->leftOperator = $2;
-	$$->leftOperand = NULL;
-	$$->right = $5;
-	$$->code = $4;
+  $$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
+  $$->leftOperator = $2;
+  $$->leftOperand = NULL;
+  $$->right = $5;
+  $$->code = $4;
 
 }
 
 | '(' CompoundExp ')'
 {
-	$$ = $2;
+  $$ = $2;
 
 }
 
 | SimpleExp
 {
-	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
-	$$->leftOperator = NULL;
-	$$->leftOperand = $1;
-	$$->right = NULL;
+  $$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
+  $$->leftOperator = NULL;
+  $$->leftOperand = $1;
+  $$->right = NULL;
 
 }
 
 | '-' CompoundExp
 {
-	$$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
-	$$->leftOperator = $2;
-	$$->leftOperand = NULL;
-	$$->right = NULL;
-	$$->code = '-';
+  $$ = (struct FuncOperator *) malloc (sizeof (struct FuncOperator));
+  $$->leftOperator = $2;
+  $$->leftOperand = NULL;
+  $$->right = NULL;
+  $$->code = '-';
 
 }
 ;
 
 Op: '-'
 {
-	$$ = '-';
+  $$ = '-';
 }
 
 | '+'
 {
-	$$ = '+';
+  $$ = '+';
 }
 
 | '*'
 {
-	$$ = '*';
+  $$ = '*';
 }
 
 | '/'
 {
-	$$ = '/';
+  $$ = '/';
 }
 ;
 
 AndList: '(' OrList ')' AND AndList
 {
-        // here we need to pre-pend the OrList to the AndList
-        // first we allocate space for this node
-        $$ = (struct AndList *) malloc (sizeof (struct AndList));
+  // here we need to pre-pend the OrList to the AndList
+  // first we allocate space for this node
+  $$ = (struct AndList *) malloc (sizeof (struct AndList));
 
-        // hang the OrList off of the left
-        $$->left = $2;
+  // hang the OrList off of the left
+  $$->left = $2;
 
-        // hang the AndList off of the right
-        $$->rightAnd = $5;
+  // hang the AndList off of the right
+  $$->rightAnd = $5;
 
 }
 
 | '(' OrList ')'
 {
-        // just return the OrList!
-        $$ = (struct AndList *) malloc (sizeof (struct AndList));
-        $$->left = $2;
-        $$->rightAnd = NULL;
+  // just return the OrList!
+  $$ = (struct AndList *) malloc (sizeof (struct AndList));
+  $$->left = $2;
+  $$->rightAnd = NULL;
 }
 ;
 
 OrList: Condition OR OrList
 {
-        // here we have to hang the condition off the left of the OrList
-        $$ = (struct OrList *) malloc (sizeof (struct OrList));
-        $$->left = $1;
-        $$->rightOr = $3;
+  // here we have to hang the condition off the left of the OrList
+  $$ = (struct OrList *) malloc (sizeof (struct OrList));
+  $$->left = $1;
+  $$->rightOr = $3;
 }
 
 | Condition
 {
-        // nothing to hang off of the right
-        $$ = (struct OrList *) malloc (sizeof (struct OrList));
-        $$->left = $1;
-        $$->rightOr = NULL;
+  // nothing to hang off of the right
+  $$ = (struct OrList *) malloc (sizeof (struct OrList));
+  $$->left = $1;
+  $$->rightOr = NULL;
 }
 ;
 
 Condition: Literal BoolComp Literal
 {
-        // in this case we have a simple literal/variable comparison
-        $$ = $2;
-        $$->left = $1;
-        $$->right = $3;
+  // in this case we have a simple literal/variable comparison
+  $$ = $2;
+  $$->left = $1;
+  $$->right = $3;
 }
 ;
 
 BoolComp: '<'
 {
-        // construct and send up the comparison
-        $$ = (struct ComparisonOp *) malloc (sizeof (struct ComparisonOp));
-        $$->code = LESS_THAN;
+  // construct and send up the comparison
+  $$ = (struct ComparisonOp *) malloc (sizeof (struct ComparisonOp));
+  $$->code = LESS_THAN;
 }
 
 | '>'
 {
-        // construct and send up the comparison
-        $$ = (struct ComparisonOp *) malloc (sizeof (struct ComparisonOp));
-        $$->code = GREATER_THAN;
+  // construct and send up the comparison
+  $$ = (struct ComparisonOp *) malloc (sizeof (struct ComparisonOp));
+  $$->code = GREATER_THAN;
 }
 
 | '='
 {
-        // construct and send up the comparison
-        $$ = (struct ComparisonOp *) malloc (sizeof (struct ComparisonOp));
-        $$->code = EQUALS;
+  // construct and send up the comparison
+  $$ = (struct ComparisonOp *) malloc (sizeof (struct ComparisonOp));
+  $$->code = EQUALS;
 }
 ;
 
 Literal : String
 {
-        // construct and send up the operand containing the string
-        $$ = (struct Operand *) malloc (sizeof (struct Operand));
-        $$->code = STRING;
-        $$->value = $1;
+  // construct and send up the operand containing the string
+  $$ = (struct Operand *) malloc (sizeof (struct Operand));
+  $$->code = STRING;
+  $$->value = $1;
 }
 
 | Float
 {
-        // construct and send up the operand containing the FP number
-        $$ = (struct Operand *) malloc (sizeof (struct Operand));
-        $$->code = DOUBLE;
-        $$->value = $1;
+  // construct and send up the operand containing the FP number
+  $$ = (struct Operand *) malloc (sizeof (struct Operand));
+  $$->code = DOUBLE;
+  $$->value = $1;
 }
 
 | Int
 {
-        // construct and send up the operand containing the integer
-        $$ = (struct Operand *) malloc (sizeof (struct Operand));
-        $$->code = INT;
-        $$->value = $1;
+  // construct and send up the operand containing the integer
+  $$ = (struct Operand *) malloc (sizeof (struct Operand));
+  $$->code = INT;
+  $$->value = $1;
 }
 
 | Name
 {
-        // construct and send up the operand containing the name
-        $$ = (struct Operand *) malloc (sizeof (struct Operand));
-        $$->code = NAME;
-        $$->value = $1;
+  // construct and send up the operand containing the name
+  $$ = (struct Operand *) malloc (sizeof (struct Operand));
+  $$->code = NAME;
+  $$->value = $1;
 }
 ;
 
@@ -416,26 +438,26 @@ SimpleExp:
 
 Float
 {
-        // construct and send up the operand containing the FP number
-        $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
-        $$->code = DOUBLE;
-        $$->value = $1;
+  // construct and send up the operand containing the FP number
+  $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
+  $$->code = DOUBLE;
+  $$->value = $1;
 }
 
 | Int
 {
-        // construct and send up the operand containing the integer
-        $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
-        $$->code = INT;
-        $$->value = $1;
+  // construct and send up the operand containing the integer
+  $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
+  $$->code = INT;
+  $$->value = $1;
 }
 
 | Name
 {
-        // construct and send up the operand containing the name
-        $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
-        $$->code = NAME;
-        $$->value = $1;
+  // construct and send up the operand containing the name
+  $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
+  $$->code = NAME;
+  $$->value = $1;
 }
 ;
 

@@ -45,6 +45,10 @@ class SelectPipe : public RelationalOp {
   Pipe * out;
   CNF * cnf;
   Record * lit;
+
+  pthread_t SelectPipeThread;
+  static void *thread_starter(void *context);
+  void * WorkerThread(void);
  public:
  SelectPipe() : in(0),out(0),cnf(0),lit(0) {}
   void Run (Pipe &inPipe, Pipe &outPipe, CNF &selOp, Record &literal) {
@@ -52,8 +56,9 @@ class SelectPipe : public RelationalOp {
     out = &outPipe;
     cnf = &selOp;
     lit = &literal;
+    pthread_create (&SelectPipeThread, NULL, &SelectPipe::thread_starter, this);
   }
-  void WaitUntilDone () { }
+  void WaitUntilDone ();
 };
 
 class Project : public RelationalOp {

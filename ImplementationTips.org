@@ -1,6 +1,13 @@
 
 * generic c++ tips
 
+If you get an error like
+QueryTreeNode.cc:(.text+0xa1d): undefined reference to `Function::GrowFromParseTree(FuncOperator*, Schema&)'
+
+SourceFile.cc:(.assembly+0xaddress): undefined reference to `SomeClass::Somefunction(ParameterOne, ParameterTwo...)'
+
+Then consider your makefiles. You may not be linking in the object files that contain the definitions. Or you may be linking them in the wrong order.
+
 ** STL usage
 if you intend to use STL directly, and with the objects being copied in, make sure to have a copy constructor and an assignment operator defined, because some of the objects have pointer members.
 

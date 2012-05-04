@@ -26,11 +26,15 @@ extern int distinctAtts;
 extern int distinctFunc;
 
 extern int query;
+extern int createTable; // 1 if the SQL is create table
+extern int tableType; // 0 for heap, 1 for sorted.
+extern int insertTable; // 1 if the command is Insert into table
+extern int dropTable; // 1 is the command is Drop table
 extern int outputChange;
 extern int planOnly;
 extern int setStdOut;
-extern char * outName;
-
+extern string fileName;
+extern bool keepGoing;
 
 char * const supplier = "supplier";
 char * const partsupp = "partsupp";
@@ -523,12 +527,17 @@ void cleanup(void)
   // extern struct AndList *boolean;
   //  extern struct NameList *groupingAtts;
   // extern struct NameList *attsToSelect; // final bits out,
-  // FreeNameList(groupingAtts);
-  // FreeNameList(attsToSelect);
+  FreeNameList(groupingAtts);
+  FreeNameList(attsToSelect);
+  fileName = "";
 }
 
 int main ()
 {
+  // load all the tables from a previous run
+
+
+
   {
     const string message("Welcome to MnemosyneDB");
     const string spaces(message.size(),' ');
@@ -541,263 +550,285 @@ int main ()
          << tbBorder << endl;
   }
   bool Execute = false;
-
-  // while (true) // uncomment when we get the final stuff up.
-  {
-    cout << "mdb> ";
-    yyparse();
-
-    HiResTimer rtt; // time taken before control returned to the user.
-
-    if (1 == query)
-      {
-        // create project node
-        ProjectNode pn;
-        TreeNode * top;
-        // need to malloc/new the space for the pointer for the atts to keep, need to iterate over the atts to select. call the find in schema function for each att to select. save into calloced array, this must be done at almost the last point because I will not know where it is in the entire schema till i have the end schema at the end.
-
-        // likewise for the number of atts in. num atts out is easy to calculate from what atts to select are given.
-        if (0 != finalFunction)
-          {
-            cout << "we have a function to compute" << endl;
-          }
-        cout << "grouping atts are" << endl;
-        PrintNameList(groupingAtts);
-        cout << "atts to select are" << endl;
-        PrintNameList(attsToSelect);
+  bool WriteToFile = false;
 
 
-        // need number of tables, and their aliases, in an array. First, the
-        // number of tables
-        unsigned const tableCount = NumTables(tables);
-        vector < char * > tblPtrs ;
-        cout << "There are " << tableCount << " tables" << endl;
+  do
+    {
+      cout << "mdb> ";
+      yyparse();
 
-        FillTablePtrVector(tables, tblPtrs);
-        clog << "size is " << tblPtrs.size();
-        assert (tblPtrs.size() == tableCount);
-        for (unsigned i = 0 ; i < tableCount ; i++)
-          {
-            cerr << tblPtrs[i] << " " << endl;
-          }
+      HiResTimer rtt; // time taken before control returned to the user.
 
-        PrintParseTree(boolean); // cnf
-
-        map<std::string, Schema> schemas = initSchemas();
-
-        Statistics s;
-        s = initStatistics();
-        // s.Write("beforeAlias");
-        // s.print();
-
-        CreateTablesAliases(tables,s,schemas); // from clause
-        // ReadTablesSchemas(tables, schemaHolder);
-
-        cerr << "estimating" << endl;
-        s.Estimate(boolean, &tblPtrs[0], tableCount);
-        cerr << "end estimating" << endl;
-
-        // s.Write("afterAlias");
-        // s.print();
-
-        /* break the cnf up into selections and joins, then push selections
-           down as far as possible. do the joins from smallest to
-           largest. */
-        Clauses joins;
-        Clauses selects;
+      if (1 == query)
         {
-          SeparateJoinsAndSelects(boolean,joins, selects);
+          // create project node
+          ProjectNode pn;
+          TreeNode * top;
+          // need to malloc/new the space for the pointer for the atts to keep, need to iterate over the atts to select. call the find in schema function for each att to select. save into calloced array, this must be done at almost the last point because I will not know where it is in the entire schema till i have the end schema at the end.
+
+          // likewise for the number of atts in. num atts out is easy to calculate from what atts to select are given.
+          if (0 != finalFunction)
+            {
+              cout << "we have a function to compute" << endl;
+            }
+          cout << "grouping atts are" << endl;
+          PrintNameList(groupingAtts);
+          cout << "atts to select are" << endl;
+          PrintNameList(attsToSelect);
+
+
+          // need number of tables, and their aliases, in an array. First, the
+          // number of tables
+          unsigned const tableCount = NumTables(tables);
+          vector < char * > tblPtrs ;
+          cout << "There are " << tableCount << " tables" << endl;
+
+          FillTablePtrVector(tables, tblPtrs);
+          clog << "size is " << tblPtrs.size();
+          assert (tblPtrs.size() == tableCount);
+          for (unsigned i = 0 ; i < tableCount ; i++)
+            {
+              cerr << tblPtrs[i] << " " << endl;
+            }
+
+          PrintParseTree(boolean); // cnf
+
+          map<std::string, Schema> schemas = initSchemas();
+
+          Statistics s;
+          s = initStatistics();
+          // s.Write("beforeAlias");
+          // s.print();
+
+          CreateTablesAliases(tables,s,schemas); // from clause
+          // ReadTablesSchemas(tables, schemaHolder);
+
+          cerr << "estimating" << endl;
+          s.Estimate(boolean, &tblPtrs[0], tableCount);
+          cerr << "end estimating" << endl;
+
+          // s.Write("afterAlias");
+          // s.print();
+
+          /* break the cnf up into selections and joins, then push selections
+             down as far as possible. do the joins from smallest to
+             largest. */
+          Clauses joins;
+          Clauses selects;
+          {
+            SeparateJoinsAndSelects(boolean,joins, selects);
+          }
+          // find virtual select ( a condition like (l_orderkey < 100 OR o_orderkey < 100)
+          // which requires a joined tables, and thus a select pipe (which I don't think I implemented, heh)
+          Clauses virtualSelects;
+          FindVirtualSelects(selects, s, virtualSelects);
+          clog << "num joins is " << joins.size() << endl
+               << "num selects is " << selects.size() << endl
+               << "num virtual selects needing joined tables is " << virtualSelects.size() << endl;
+
+          // make nodes for each join and select
+          clog << "select file node generation" << endl;
+          vector<SelectFileNode> sfNodes;
+          for (Clauses::iterator it = selects.begin(); it != selects.end(); it++)
+            {
+              AndList * cnf = &(*it);
+              PrintParseTree(cnf);
+              double result = s.Estimate(cnf, &tblPtrs[0], tableCount);
+              clog << "select estimate is" << result << endl;
+              SelectFileNode sfn;
+              sfn.cnf = cnf;
+              string attr = getSelectAttr(cnf); // get the attribute that is in the select statement.
+              sfn.attr = attr;
+              clog << " attr in select is " << attr << endl;
+              // I want the schema, so I need the
+              string attrHome = s.getAttrHomeTable(attr);
+              clog << "table that attr is in is " << attrHome << endl;
+              sfn.sch = schemas[attrHome];
+              sfn.sch.Print();
+              sfNodes.push_back(sfn);
+            } // select file nodes now have a schema set, and cnf set.
+          assert(sfNodes.size() == selects.size());
+          clog << "join node generation" << endl;
+          vector<JoinNode> jNodes;
+          for (Clauses::iterator it = joins.begin(); it != joins.end(); it++)
+            {
+              AndList * cnf = &(*it);
+              PrintParseTree(cnf);
+              double result = s.Estimate(cnf, &tblPtrs[0], tableCount);
+              clog << "select estimate is" << result << endl;
+              JoinNode jn;
+              jNodes.push_back(jn);
+            }
+          assert(jNodes.size() == joins.size());
+          clog << "select pipe node generation" << endl;
+          vector<SelectPipeNode> spNodes;
+          for (Clauses::iterator it = virtualSelects.begin(); it != virtualSelects.end(); it++)
+            {
+              AndList * cnf = &(*it);
+              PrintParseTree(cnf);
+              double result = s.Estimate(cnf, &tblPtrs[0], tableCount); // shouldn't work.
+              clog << "select estimate is" << result << endl;
+              SelectPipeNode spn;
+              spNodes.push_back(spn);
+            }
+          assert(spNodes.size() == virtualSelects.size());
+          clog << "built all the interior nodes from where clause (select, join, virtualSelect)" << endl;
+          // connect them all up.
+
+          /* I need to go through each select clause, and
+             if there is more than one OR clause inside,
+             check that each of it's arguments is belonging to a relation, that is all the same relation, if not, a joined table is required.
+          */
+
+          // new Schema (catalog_path, part); // how to get a schema for a relation.....................
+
+          // q6 first ish., pure select.
+          // q3 looks pretty easy
+          // q10
+          // q4 as well, superfluous join,
+          // selects before joins.
+
+          clog << "distinct atts " << distinctAtts << endl;
+          clog << "function was: " << distinctFunc << ". 0 means SUM, 1 means SUM DISTINCT" << endl;
+
+          // use
+          // Function.GrowFromParseTree (finalfunc, *left);
+          // constructs arithmetic inside function to
+
+          if(0 == finalFunction)
+            {
+              clog << "we have no function given, so, there is no SUM or SUM DISTINCT." << endl;;
+              if(0 == distinctAtts)
+                {
+                  clog << "there is no distinct at all." << endl;
+                  /*
+                    SELECT l.l_orderkey
+                    FROM lineitem AS l
+                    WHERE (l.l_quantity > 30)
+
+                    should be
+                    project to output
+                    select to project
+                    file to select
+
+                    select can be selectfile, not select pipe
+                  */
+                  if (sfNodes.size() > 0 and 0 == jNodes.size() and 0 == spNodes.size()) // the third is necessarily true from the second. can't have a join selectpipe if there was no join, can only ever have one select if there is no join.
+                    {
+                      clog << "only select, and nothing else, combined with no function and no distinct, makes hopefully an easy case." << endl;
+                      // how do I know to connect anything with anything else.
+                      // here we have no joins, and no interior selects. so only select and project.
+
+                      vector<string> attrs;
+                      GetAttsOut(attsToSelect, attrs);
+
+                      // guys in NameList come out in reverse order, so reverse it.
+                      reverse(attrs.begin(), attrs.end());
+
+                      // find the select statement, that has the attr that is coming out.
+                      SelectFileNode sfn;
+                      vector<int> attrIndexesToKeep;
+                      for (vector<string>::iterator jt = attrs.begin(); jt != attrs.end(); jt++)
+                        {
+                          for (vector<SelectFileNode>::iterator it = sfNodes.begin(); it != sfNodes.end(); it++)
+                            {
+                              if (-1 != (*it).sch.Find((*jt).c_str())) // if it isn't found,
+                                { // then it has been found
+                                  auto location = (*it).sch.Find((*jt).c_str());
+                                  attrIndexesToKeep.push_back(location);
+                                  sfn = (*it);
+                                }
+                            }
+                        }
+                      // at this point, we have the attrs of the schema that exists in the node below, and the node below.
+                      // sfn, is our node that we will point our select at, and have point at our project.
+                      // attrIndexesToKeep, is the 'array' that we will give
+
+                      // NameList *attsToSelect; // final bits out,
+
+                      unsigned freshPID = GetPipeID();
+                      sfn.PipeID = pn.PipeID = freshPID;
+                      int numIn(sfn.sch.GetNumAtts());
+                      int numOut(NameListLen(attsToSelect));
+                      Schema pOutSchema(sfn.sch, attrIndexesToKeep); // need to generate the new schema, that has numout attrs, which are those of the attrindexestokeep
+                      pOutSchema.Print(); // oh my god is this right...?
+                      pn.attsToKeep = attrIndexesToKeep;
+                      pn.numIn = numIn;
+                      pn.numOut = numOut;
+                      pn.sch = pOutSchema;
+                      pn.down = &sfn;
+                      sfn.up = &pn;
+                      top = &pn;
+                    }
+                }
+            }
+
+          // everything has been constructed at this point
+
+          // print
+          clog << endl << " Printing the query plan" << endl << endl;
+          // assuming for now that the last thing is always a ProjectNode, which we created at the beginning. (It could be a write to file, implemented in p5)
+          PrintScheduleTree(top);
+
+          // execute.
+          if (Execute)
+            {
+              clog << endl << " Executing the query " << endl << endl;
+              // we've got our output node top.
+
+              // select files need to know files to select.
+              // need to instantiate relation operators
+              // need to establish pipes from place to place
+              // for our select file nodes, need to
+            }
+          clog << "was a query" << endl;
         }
-        // find virtual select ( a condition like (l_orderkey < 100 OR o_orderkey < 100)
-        // which requires a joined tables, and thus a select pipe (which I don't think I implemented, heh)
-        Clauses virtualSelects;
-        FindVirtualSelects(selects, s, virtualSelects);
-        clog << "num joins is " << joins.size() << endl
-             << "num selects is " << selects.size() << endl
-             << "num virtual selects needing joined tables is " << virtualSelects.size() << endl;
+      else if (0 == query) // == true
+        {
+          clog << "was a maintenance command" << endl;
+          if (1 == outputChange) // SET OUTPUT
+            {
+              clog << "OutputChanging command" << endl;
+              // check variable planOnly
+              clog << "FILE IS " << fileName << endl;
 
-        // make nodes for each join and select
-        clog << "select file node generation" << endl;
-        vector<SelectFileNode> sfNodes;
-        for (Clauses::iterator it = selects.begin(); it != selects.end(); it++)
-          {
-            AndList * cnf = &(*it);
-            PrintParseTree(cnf);
-            double result = s.Estimate(cnf, &tblPtrs[0], tableCount);
-            clog << "select estimate is" << result << endl;
-            SelectFileNode sfn;
-            sfn.cnf = cnf;
-            string attr = getSelectAttr(cnf); // get the attribute that is in the select statement.
-            sfn.attr = attr;
-            clog << " attr in select is " << attr << endl;
-            // I want the schema, so I need the
-            string attrHome = s.getAttrHomeTable(attr);
-            clog << "table that attr is in is " << attrHome << endl;
-            sfn.sch = schemas[attrHome];
-            sfn.sch.Print();
-            sfNodes.push_back(sfn);
-          } // select file nodes now have a schema set, and cnf set.
-        assert(sfNodes.size() == selects.size());
-        clog << "join node generation" << endl;
-        vector<JoinNode> jNodes;
-        for (Clauses::iterator it = joins.begin(); it != joins.end(); it++)
-          {
-            AndList * cnf = &(*it);
-            PrintParseTree(cnf);
-            double result = s.Estimate(cnf, &tblPtrs[0], tableCount);
-            clog << "select estimate is" << result << endl;
-            JoinNode jn;
-            jNodes.push_back(jn);
-          }
-        assert(jNodes.size() == joins.size());
-        clog << "select pipe node generation" << endl;
-        vector<SelectPipeNode> spNodes;
-        for (Clauses::iterator it = virtualSelects.begin(); it != virtualSelects.end(); it++)
-          {
-            AndList * cnf = &(*it);
-            PrintParseTree(cnf);
-            double result = s.Estimate(cnf, &tblPtrs[0], tableCount); // shouldn't work.
-            clog << "select estimate is" << result << endl;
-            SelectPipeNode spn;
-            spNodes.push_back(spn);
-          }
-        assert(spNodes.size() == virtualSelects.size());
-        clog << "built all the interior nodes from where clause (select, join, virtualSelect)" << endl;
-        // connect them all up.
-
-        /* I need to go through each select clause, and
-           if there is more than one OR clause inside,
-           check that each of it's arguments is belonging to a relation, that is all the same relation, if not, a joined table is required.
-        */
-
-        // new Schema (catalog_path, part); // how to get a schema for a relation.....................
-
-        // q6 first ish., pure select.
-        // q3 looks pretty easy
-        // q10
-        // q4 as well, superfluous join,
-        // selects before joins.
-
-        clog << "distinct atts " << distinctAtts << endl;
-        clog << "function was: " << distinctFunc << ". 0 means SUM, 1 means SUM DISTINCT" << endl;
-
-        // use
-        // Function.GrowFromParseTree (finalfunc, *left);
-        // constructs arithmetic inside function to
-
-        if(0 == finalFunction)
-          {
-            clog << "we have no function given, so, there is no SUM or SUM DISTINCT." << endl;;
-            if(0 == distinctAtts)
-              {
-                clog << "there is no distinct at all." << endl;
-                /*
-                  SELECT l.l_orderkey
-                  FROM lineitem AS l
-                  WHERE (l.l_quantity > 30)
-
-                  should be
-                  project to output
-                  select to project
-                  file to select
-
-                  select can be selectfile, not select pipe
-                */
-                if (sfNodes.size() > 0 and 0 == jNodes.size() and 0 == spNodes.size()) // the third is necessarily true from the second. can't have a join selectpipe if there was no join, can only ever have one select if there is no join.
-                  {
-                    clog << "only select, and nothing else, combined with no function and no distinct, makes hopefully an easy case." << endl;
-                    // how do I know to connect anything with anything else.
-                    // here we have no joins, and no interior selects. so only select and project.
-
-                    vector<string> attrs;
-                    GetAttsOut(attsToSelect, attrs);
-
-                    // guys in NameList come out in reverse order, so reverse it.
-                    reverse(attrs.begin(), attrs.end());
-
-                    // find the select statement, that has the attr that is coming out.
-                    SelectFileNode sfn;
-                    vector<int> attrIndexesToKeep;
-                    for (vector<string>::iterator jt = attrs.begin(); jt != attrs.end(); jt++)
-                      {
-                        for (vector<SelectFileNode>::iterator it = sfNodes.begin(); it != sfNodes.end(); it++)
-                          {
-                            if (-1 != (*it).sch.Find((*jt).c_str())) // if it isn't found,
-                              { // then it has been found
-                                auto location = (*it).sch.Find((*jt).c_str());
-                                attrIndexesToKeep.push_back(location);
-                                sfn = (*it);
-                              }
-                          }
-                      }
-                    // at this point, we have the attrs of the schema that exists in the node below, and the node below.
-                    // sfn, is our node that we will point our select at, and have point at our project.
-                    // attrIndexesToKeep, is the 'array' that we will give
-
-                    // NameList *attsToSelect; // final bits out,
-
-                    unsigned freshPID = GetPipeID();
-                    sfn.PipeID = pn.PipeID = freshPID;
-                    int numIn(sfn.sch.GetNumAtts());
-                    int numOut(NameListLen(attsToSelect));
-                    Schema pOutSchema(sfn.sch, attrIndexesToKeep); // need to generate the new schema, that has numout attrs, which are those of the attrindexestokeep
-                    pOutSchema.Print(); // oh my god is this right...?
-                    pn.attsToKeep = attrIndexesToKeep;
-                    pn.numIn = numIn;
-                    pn.numOut = numOut;
-                    pn.sch = pOutSchema;
-                    pn.down = &sfn;
-                    sfn.up = &pn;
-                    top = &pn;
-                  }
-              }
-          }
-
-        // everything has been constructed at this point
-
-        // print
-        clog << endl << " Printing the query plan" << endl << endl;
-        // assuming for now that the last thing is always a ProjectNode, which we created at the beginning. (It could be a write to file, implemented in p5)
-        PrintScheduleTree(top);
-
-        // execute.
-        clog << endl << " Executing the query " << endl << endl;
-        // we've got our output node top.
-
-        // select files need to know files to select.
-        // need to instantiate relation operators
-        // need to establish pipes from place to place
-        // for our select file nodes, need to
-        clog << "was a query" << endl;
-      }
-    else
-      {
-        clog << "was a maintenance command" << endl;
-        if (1 == outputChange)
-          {
-            clog << "OutputChanging command" << endl;
-            // check variable planOnly
-            clog << "FILE IS " << (void*)outName << endl;
-
-            if(1 == planOnly)
-              {
-                clog << "PLANNING ONLY, NO EXECUTION." << endl;
-                Execute = false;
-              }
-            else if (1 == setStdOut)
-              {
-                 clog << "RESULTS TO STANDARD OUT, EXECUTE." << endl;
-                 Execute = true;
-              }
-            else if (0 != outName)
-              {
-                 clog << "RESULTS TO FILE, EXECUTE." << endl;
-                 string fname(outName);
-                 clog << "FILE IS " << fname << endl;
-                 Execute = true;
-              }
-          }
-      }
-    clog << endl;
-  }
+              if(1 == planOnly)
+                {
+                  clog << "PLANNING ONLY, NO EXECUTION." << endl;
+                  Execute = false;
+                }
+              else if (1 == setStdOut)
+                {
+                  clog << "RESULTS TO STANDARD OUT, EXECUTE." << endl;
+                  Execute = true;
+                }
+              else if (!fileName.empty())
+                {
+                  clog << "RESULTS TO FILE, EXECUTE." << endl;
+                  string fname(fileName);
+                  WriteToFile = true;
+                  clog << "FILE IS " << fname << endl;
+                  Execute = true;
+                }
+            }
+          else if (1 == insertTable) // INSERT 'mytable.tbl' INTO relation
+            {
+              cout << "insert table" << endl;
+            }
+          else if (1 == createTable)
+            {
+              cout << "create table" << endl;
+            }
+          else if (1 == dropTable)
+            {
+              cout << "drop table" << endl;
+            }
+        }
+      else
+        {
+          clog << endl;
+        }
+    }
+  while (keepGoing); // uncomment when we get the final stuff up.
 }

@@ -129,12 +129,12 @@ void yyerror(char*s);
   			return(Name);
 			}
 
-\'[A-Za-z0-9_\/\.]*\' {yylval.actualChars = strdup(yytext + 1);
+\'[A-Za-z0-9_\/\.]+\' {yylval.actualChars = strdup(yytext + 1);
                        if (yylval.actualChars[yyleng-2] != '\'')
-                           printf("improperly terminated string");
+                           yyerror("LEX_ERROR: improperly terminated string");
                        else
                            yylval.actualChars[yyleng-2] = 0;
-                       printf("found ### %s ###\n", yylval.actualChars);
+                       // printf("found ### %s ###\n", yylval.actualChars);
                        return(FilePath);
                        }
 

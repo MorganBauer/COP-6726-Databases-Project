@@ -47,6 +47,52 @@ void SelectFile::WaitUntilDone () {
   clog << "SF complete, joined" << endl;
 }
 
+
+
+
+
+void * SelectPipe :: thread_starter(void *context)
+{
+  return reinterpret_cast<SelectPipe*>(context)->WorkerThread();
+}
+
+void * SelectPipe :: WorkerThread(void) {
+  clog << "SF worker thread started" << endl;
+  Pipe & inPipe = *in;
+  Pipe & outPipe = *out;
+  CNF & selOp = *cnf;
+  Record & literal = *lit;
+  int counter = 0;
+  Record temp;
+
+  ComparisonEngine comp;
+
+  while (inPipe.Remove(&temp))
+    {
+      if (SUCCESS == comp.Compare (&temp, &literal, &selOp)) {
+        counter += 1;
+        if (counter % 10000 == 0) {
+          clog << counter/10000 << " ";
+        }
+        outPipe.Insert(&temp);
+      }
+    }
+  cout << endl << " selected " << counter << " recs \n";
+
+  outPipe.ShutDown();
+  clog << "select pipe ending, after selecting " << counter << " records" << endl;
+  pthread_exit(NULL); // make our worker thread go away
+}
+
+void SelectPipe::WaitUntilDone () {
+  clog << "SP waiting til done" << endl;
+  pthread_join (SelectPipeThread, NULL);
+  clog << "SP complete, joined" << endl;
+}
+
+
+
+
 void * Sum :: thread_starter(void *context)
 {
   clog << "starting sum thread" << endl;
@@ -318,7 +364,7 @@ void * Join :: WorkerThread(void) {
               //#pragma omp section
               FillBuffer( LeftRecord,  LeftBuffer, outPipeL, sortOrderL);
               //#pragma omp section
-                FillBuffer(RightRecord, RightBuffer, outPipeR, sortOrderR);
+              FillBuffer(RightRecord, RightBuffer, outPipeR, sortOrderR);
             }
             unsigned int lSize = LeftBuffer.size();
             unsigned int rSize = RightBuffer.size();
