@@ -2,20 +2,6 @@
 #define BIGQ_H
 #include <pthread.h>
 #include <iostream>
-<<<<<<< HEAD
-#include "Pipe.h"
-#include "File.h"
-#include "Record.h"
-
-using namespace std;
-
-class BigQ {
-
-public:
-
-	BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);
-	~BigQ ();
-=======
 #include <vector>
 #include <utility>
 #include "Pipe.h"
@@ -147,7 +133,6 @@ class BigQ {
  public:
   BigQ (Pipe &in, Pipe &out, OrderMaker &sortorder, int runlen);
   ~BigQ ();
->>>>>>> p4-2
 };
 
 #endif
