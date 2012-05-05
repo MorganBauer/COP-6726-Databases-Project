@@ -38,7 +38,7 @@
   int outputChange = 0;
   int planOnly = 0; // 1 if we are changing settings to planning only. Do not execute.
   int setStdOut = 0;
-
+  bool pureSelection = false;
   bool keepGoing = true;
   // shared variables, variables shared between more than one parsing.
   string tableName;
@@ -144,7 +144,7 @@ SQL: SELECT WhatIWant FROM Tables WHERE AndList
 {
   outputChange = 1;
 }
-| INSERT FilePath INTO Name
+| INSERT String INTO Name
 {
   insertTable = 1;
   fileName = $2;
@@ -175,7 +175,7 @@ OutSetting: STDOUT
   planOnly = 1;
   fileName = "";
 }
-| FilePath
+| String
 {
   string fn($1);
   fileName = $1;
@@ -215,7 +215,6 @@ AttrType : INTEGER_ATTR
 WhatIWant: Function ',' Atts
 {
   attsToSelect = $3;
-  distinctAtts = 0;
 }
 
 | Function
@@ -225,7 +224,7 @@ WhatIWant: Function ',' Atts
 
 | Atts
 {
-  distinctAtts = 0;
+  pureSelection = true;
   finalFunction = NULL;
   attsToSelect = $1;
 }
@@ -240,7 +239,6 @@ WhatIWant: Function ',' Atts
 
 Function: SUM '(' CompoundExp ')'
 {
-  distinctFunc = 0;
   finalFunction = $3;
 }
 

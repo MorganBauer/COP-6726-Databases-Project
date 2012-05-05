@@ -31,37 +31,37 @@ a22.out: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.
 	$(CC) -o a22.out Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o y.tab.o lex.yy.o a2-2test.o -lfl -lpthread
 
 a2-2test.o: a2-2test.cc a2-2test.h
-	$(CC)  -c a2-2test.cc
+	$(CC) -c a2-2test.cc
 
 a2-1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o y.tab.o lex.yy.o a2-1test.o
 	$(CC) -o a2-1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o BigQ.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o y.tab.o lex.yy.o a2-1test.o -lfl -lpthread
 
 a2-11test.o: a2-1test.cc a2-1test.h
-	$(CC)  -c a2-1test.cc
+	$(CC) -c a2-1test.cc
 
 a1test: Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o BigQ.o Pipe.o SortedDBFile.o y.tab.o lex.yy.o a1test.o
 	$(CC) -o a1test Record.o Comparison.o ComparisonEngine.o Schema.o File.o DBFile.o GenericDBFile.o HeapDBFile.o BigQ.o Pipe.o SortedDBFile.o y.tab.o lex.yy.o a1test.o -lfl -lpthread
 
 a1test.o: a1test.cc a1test.h
-	$(CC)  -c a1test.cc
+	$(CC) -c a1test.cc
 
 main:   y.tab.o lex.yy.o main.o Statistics.o Schema.o Record.o Comparison.o ComparisonEngine.o File.o DBFile.o GenericDBFile.o HeapDBFile.o BigQ.o Pipe.o SortedDBFile.o RelOp.o Function.o
 	$(CC) -o main y.tab.o lex.yy.o Schema.o Record.o Comparison.o ComparisonEngine.o File.o DBFile.o GenericDBFile.o HeapDBFile.o SortedDBFile.o Pipe.o BigQ.o RelOp.o Function.o  Statistics.o main.o -lfl
 
 main.o : main.cc main.h
-	$(CC) -g -c main.cc
+	$(CC) -c main.cc
 
 Comparison.o: Comparison.cc Comparison.h
-	$(CC)  -c Comparison.cc
+	$(CC) -c Comparison.cc
 
 ComparisonEngine.o: ComparisonEngine.cc ComparisonEngine.h
-	$(CC)  -c ComparisonEngine.cc
+	$(CC) -c ComparisonEngine.cc
 
 Pipe.o: Pipe.cc Pipe.h
-	$(CC)  -c Pipe.cc
+	$(CC) -c Pipe.cc
 
 BigQ.o: BigQ.cc BigQ.h
-	$(CC)  -c BigQ.cc
+	$(CC) -c BigQ.cc
 
 RelOp.o: RelOp.cc RelOp.h
 	$(CC) -c RelOp.cc
@@ -70,31 +70,31 @@ Function.o: Function.cc Function.h
 	$(CC) -c Function.cc
 
 BPlusDBFile.o: BPlusDBFile.cc BPlusDBFile.h DBFileDefs.h
-	$(CC)  -c BPlusDBFile.cc
+	$(CC) -c BPlusDBFile.cc
 
 SortedDBFile.o: SortedDBFile.cc SortedDBFile.h DBFileDefs.h
-	$(CC)  -c SortedDBFile.cc
+	$(CC) -c SortedDBFile.cc
 
 HeapDBFile.o: HeapDBFile.cc HeapDBFile.h DBFileDefs.h
-	$(CC)  -c HeapDBFile.cc
+	$(CC) -c HeapDBFile.cc
 
 GenericDBFile.o: GenericDBFile.cc GenericDBFile.h DBFileDefs.h
-	$(CC)  -c GenericDBFile.cc
+	$(CC) -c GenericDBFile.cc
 
 DBFile.o: DBFile.cc DBFile.h DBFileDefs.h
-	$(CC)  -c DBFile.cc
+	$(CC) -c DBFile.cc
 
 File.o: File.cc File.h
-	$(CC)  -c File.cc
+	$(CC) -c File.cc
 
 Record.o: Record.cc Record.h
-	$(CC)  -c Record.cc
+	$(CC) -c Record.cc
 
 Schema.o: Schema.cc Schema.h
-	$(CC)  -c Schema.cc
+	$(CC) -c Schema.cc
 
 TwoWayList.o : TwoWayList.cc TwoWayList.h
-	$(CC)  -c TwoWayList.cc
+	$(CC) -c TwoWayList.cc
 
 y.tab.o: Parser.y
 	yacc -d Parser.y

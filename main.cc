@@ -49,6 +49,7 @@ extern int setStdOut;
 extern string tableName;
 extern string fileName;
 extern bool keepGoing;
+extern bool pureSelection;
 extern vector<Attribute> attributes;
 
 char * const supplier = "supplier";
@@ -242,7 +243,7 @@ void CreateTablesAliases (TableList * tblst, Statistics & s, map<std::string, Sc
 {
   while (0 != tblst)
     {
-      cout << "Table " << tblst->tableName << " is aliased to " << tblst->aliasAs << endl;
+      // cout << "Table " << tblst->tableName << " is aliased to " << tblst->aliasAs << endl;
       s.CopyRel(tblst->tableName,tblst->aliasAs);
       Schema oldSchema = schs[tblst->tableName];
       // might need to reseat iterior before assignment.
@@ -271,7 +272,7 @@ unsigned NumTables (TableList * tblst)
   while (0 != tblst)
     {
       tableCount++;
-      cout << "Table " << tblst->tableName << " is aliased to " << tblst->aliasAs << endl;
+      // cout << "Table " << tblst->tableName << " is aliased to " << tblst->aliasAs << endl;
       tblst = tblst->next;
     }
   return tableCount;
@@ -429,9 +430,11 @@ struct TreeNode
 {
   QueryNodeType code;
   TreeNode () {}
-  TreeNode (QueryNodeType c) : code(c) {}
+  TreeNode (QueryNodeType c) : code(c), down(0), InPipeID(0), OutPipeID(0) {}
   Schema sch;
-  unsigned PipeID;
+  TreeNode * down;
+  unsigned InPipeID;
+  unsigned OutPipeID;
   virtual ~TreeNode () {}
 };
 
@@ -456,7 +459,7 @@ struct SelectFileNode : TreeNode
          << " on at least the attribute " << attr << endl;
     clog << "the selection condition is " << endl;
     PrintParseTree(cnf);
-    clog << " we came from " << up << " and are connected to it through Pipe " << PipeID << endl;
+    clog << " we came from " << up << " and are connected to it through Pipe " << InPipeID << endl;
     clog << "********" << endl;
   }
 };
@@ -467,7 +470,6 @@ struct ProjectNode : TreeNode
   vector<int> attsToKeep;
   int numIn;
   int numOut;
-  TreeNode * down;
   ~ProjectNode() { }
   void Print()
   {
@@ -476,7 +478,7 @@ struct ProjectNode : TreeNode
          << numIn << " attributes are coming in" << endl
          << numOut << " attributes are going out" << endl
          << "it is connected to the node " << down << endl
-         << "by a pipe, with PipeID: " << PipeID << endl
+         << "by a pipe, with PipeID: " << OutPipeID << endl
          << " the out schema is ";
     sch.Print();
     clog << "********" << endl;
@@ -490,6 +492,24 @@ struct JoinNode : TreeNode
   TreeNode * right;
 };
 
+struct WriteOutNode : TreeNode
+{
+  WriteOutNode() : TreeNode(WriteOut) {}
+  string fileOutName;
+  void Print()
+  {
+    clog << "********" << endl
+         << "This is a Write Out To File Node " << this << endl
+         << "writing to file " << fileOutName << endl
+         << "it is connected " // to the node " << down << endl
+         << "by a pipe, with PipeID: " << InPipeID << endl
+         << " the out schema is ";
+    sch.Print();
+    clog << "********" << endl;
+  }
+};
+
+
 void GetAttsOut(NameList * nmlst, vector<string> & attrs)
 {
   while (0 != nmlst)
@@ -498,6 +518,7 @@ void GetAttsOut(NameList * nmlst, vector<string> & attrs)
       attrs.push_back(attr);
       nmlst = nmlst->next;
     }
+  reverse(attrs.begin(), attrs.end());
   return;
 }
 
@@ -522,12 +543,52 @@ void PrintScheduleTree(TreeNode * tn)
             return; // this is a dead end, there can be nothing below it.
           }
           break;
+        case WriteOut:
+            {
+              WriteOutNode * won = ((WriteOutNode *)tn);
+              won->Print();
+              PrintScheduleTree(won->down);
+            }
+          break;
         default:
           {
-
+            clog << "did not implement printing of node with code " << tn->code << endl;
           }
         }
 
+    }
+}
+
+void ExecuteScheduleTree(TreeNode * tn)
+{
+  if(0 != tn)
+    {
+      switch(tn->code)
+        {
+        case Project :
+          {
+            // print the project node.
+            ProjectNode * pn = ((ProjectNode *)tn);
+            PrintScheduleTree(pn->down);
+          }
+          break;
+        case SelectFile:
+          {
+            SelectFileNode * sfn = ((SelectFileNode *)tn);
+            return; // this is a dead end, there can be nothing below it.
+          }
+          break;
+        case WriteOut:
+            {
+              WriteOutNode * won = ((WriteOutNode *)tn);
+              PrintScheduleTree(won->down);
+            }
+          break;
+        default:
+          {
+            clog << "did not implement printing of node with code " << tn->code << endl;
+          }
+        }
     }
 }
 
@@ -537,14 +598,39 @@ int GetPipeID()
   return ++pipeID;
 }
 
-void FreeNameList (NameList * nmlst)
+
+void FreeTableList (TableList * lst)
 {
-  while (0 != nmlst)
+  while (0 != lst)
     {
-      NameList * oldNmLst = nmlst;
-      nmlst = oldNmLst->next;
-      oldNmLst->next = 0;
-      free(oldNmLst);
+      TableList * oldLst = lst;
+      lst = oldLst->next;
+      oldLst->next = 0;
+      free(oldLst->tableName);
+      free(oldLst->aliasAs);
+      free(oldLst);
+    }
+}
+
+void FreeAndList (AndList * lst)
+{
+  while (0 != lst)
+    {
+      AndList * oldLst = lst;
+      lst = oldLst->rightAnd;
+      oldLst->rightAnd = 0;
+      free(oldLst);
+    }
+}
+
+void FreeNameList (NameList * lst)
+{
+  while (0 != lst)
+    {
+      NameList * oldLst = lst;
+      lst = oldLst->next;
+      oldLst->next = 0;
+      free(oldLst);
     }
 }
 
@@ -552,11 +638,13 @@ void cleanup(void)
 {
   // extern struct FuncOperator *finalFunction;
   // extern struct TableList *tables;
+  // FreeTableList(tables);
   // extern struct AndList *boolean;
+  // FreeAndList(boolean); // need to recurse more deeper into the list to free everything else.
   //  extern struct NameList *groupingAtts;
   // extern struct NameList *attsToSelect; // final bits out,
-  FreeNameList(groupingAtts);
-  FreeNameList(attsToSelect);
+  // FreeNameList(groupingAtts);
+  // FreeNameList(attsToSelect);
   fileName = "";
   tableName = "";
   // empty the vector of attributes, free the namestring.
@@ -579,6 +667,8 @@ void cleanup(void)
   outputChange = 0;
   planOnly = 0; // 1 if we are changing settings to planning only. Do not execute.
   setStdOut = 0;
+  pureSelection = false;
+  pipeID = 0;
 }
 
 int main ()
@@ -620,7 +710,6 @@ int main ()
       if (1 == query)
         {
           // create project node
-          ProjectNode pn;
           TreeNode * top;
           // need to malloc/new the space for the pointer for the atts to keep, need to iterate over the atts to select. call the find in schema function for each att to select. save into calloced array, this must be done at almost the last point because I will not know where it is in the entire schema till i have the end schema at the end.
 
@@ -647,215 +736,112 @@ int main ()
                   break;
                 }
             }
-          cerr << "shit failed??" << endl;
-          // need number of tables, and their aliases, in an array. First, the
-          // number of tables
-          unsigned const tableCount = queryTableNames.size();//NumTables(tables);
-          vector < char * > tblPtrs ;
-          cout << "There are " << tableCount << " tables" << endl;
-
-          FillTablePtrVector(tables, tblPtrs);
-          clog << "size is " << tblPtrs.size();
-          assert (tblPtrs.size() == tableCount);
-          clog << "this should print out each cnf clause" << endl;
-          for (unsigned i = 0 ; i < tableCount ; i++)
+          if(!haveTables)
             {
-              cerr << tblPtrs[i] << " " << endl;
+              cerr << "fatty fatty no tables" << endl;
             }
-
-          PrintParseTree(boolean); // cnf
-
-          map<std::string, Schema> schemas = TableToSchema;// initSchemas(); // need to put schemas from TableToSchma in here
-
-          Statistics s;
-          s = initStatistics();
-          // s.Write("beforeAlias");
-          // s.print();
-
-          CreateTablesAliases(tables,s,schemas); // from clause, creates the aliases in the statistics object using copyrel.
-          // ReadTablesSchemas(tables, schemaHolder);
-
-          cerr << "estimating" << endl;
-          s.Estimate(boolean, &tblPtrs[0], tableCount);
-          cerr << "end estimating" << endl;
-
-          // s.Write("afterAlias");
-          // s.print();
-
-          /* break the cnf up into selections and joins, then push selections
-             down as far as possible. do the joins from smallest to
-             largest. */
-          Clauses joins;
-          Clauses selects;
-          {
-            SeparateJoinsAndSelects(boolean,joins, selects);
-          }
-          // find virtual select ( a condition like (l_orderkey < 100 OR o_orderkey < 100)
-          // which requires a joined tables, and thus a select pipe (which I don't think I implemented, heh)
-          Clauses virtualSelects;
-          FindVirtualSelects(selects, s, virtualSelects);
-          clog << "num joins is " << joins.size() << endl
-               << "num selects is " << selects.size() << endl
-               << "num virtual selects needing joined tables is " << virtualSelects.size() << endl;
-
-          // make nodes for each join and select
-          clog << "select file node generation" << endl;
-          vector<SelectFileNode> sfNodes;
-          for (Clauses::iterator it = selects.begin(); it != selects.end(); it++)
+          else
             {
-              AndList * cnf = &(*it);
-              PrintParseTree(cnf);
-              double result = s.Estimate(cnf, &tblPtrs[0], tableCount);
-              clog << "select estimate is" << result << endl;
-              SelectFileNode sfn;
-              sfn.cnf = cnf;
-              string attr = getSelectAttr(cnf); // get the attribute that is in the select statement.
-              sfn.attr = attr;
-              clog << " attr in select is " << attr << endl;
-              // I want the schema, so I need the
-              string attrHome = s.getAttrHomeTable(attr);
-              clog << "table that attr is in is " << attrHome << endl;
-              sfn.sch = schemas[attrHome];
-              sfn.sch.Print();
-              sfNodes.push_back(sfn);
-            } // select file nodes now have a schema set, and cnf set.
-          assert(sfNodes.size() == selects.size());
-          clog << "join node generation" << endl;
-          vector<JoinNode> jNodes;
-          for (Clauses::iterator it = joins.begin(); it != joins.end(); it++)
-            {
-              AndList * cnf = &(*it);
-              PrintParseTree(cnf);
-              double result = s.Estimate(cnf, &tblPtrs[0], tableCount);
-              clog << "select estimate is" << result << endl;
-              JoinNode jn;
-              jNodes.push_back(jn);
-            }
-          assert(jNodes.size() == joins.size());
-          clog << "select pipe node generation" << endl;
-          vector<SelectPipeNode> spNodes;
-          for (Clauses::iterator it = virtualSelects.begin(); it != virtualSelects.end(); it++)
-            {
-              AndList * cnf = &(*it);
-              PrintParseTree(cnf);
-              double result = s.Estimate(cnf, &tblPtrs[0], tableCount); // shouldn't work.
-              clog << "select estimate is" << result << endl;
-              SelectPipeNode spn;
-              spNodes.push_back(spn);
-            }
-          assert(spNodes.size() == virtualSelects.size());
-          clog << "built all the interior nodes from where clause (select, join, virtualSelect)" << endl;
-          // connect them all up.
+              clog << "have all the tables needed, good to go!" << endl;
 
-          /* I need to go through each select clause, and
-             if there is more than one OR clause inside,
-             check that each of it's arguments is belonging to a relation, that is all the same relation, if not, a joined table is required.
-          */
+              Statistics s;
+              s = initStatistics();
+              map<std::string, Schema> schemas = TableToSchema;// initSchemas(); // need to put schemas from TableToSchma in here
+              CreateTablesAliases(tables,s,schemas); // from clause, creates the aliases in the statistics object using copyrel.
 
-          // new Schema (catalog_path, part); // how to get a schema for a relation.....................
+              // number of tables
+              unsigned const tableCount = queryTableNames.size();
+              cout << "There are " << tableCount << " tables" << endl;
 
-          // q6 first ish., pure select.
-          // q3 looks pretty easy
-          // q10
-          // q4 as well, superfluous join,
-          // selects before joins.
+              if (1 == tableCount) // SINGLETABLE
+                { // no joins, not selectpipe, purely a selectfile from a single table, to a series of tubes all the way to output.
+                  // take entire cnf, put into select file node
+                  clog << "only one table" << endl;
+                  SelectFileNode * sfnptr = new SelectFileNode();
+                  SelectFileNode & sfn = *sfnptr; // this node can take the entire cnf.
+                  sfn.cnf = boolean;
+                  string onlyTable (tables->tableName);
+                  string onlyTableAlias (tables->aliasAs);
+                  // schema for select file, need alias of table
+                  sfn.sch = schemas[onlyTableAlias];
+                  sfn.sch.Print();
+                  unsigned freshPID = GetPipeID();
+                  sfn.OutPipeID = freshPID;
+                  top = sfnptr; // first thing, let's not lose it
 
-          clog << "distinct atts " << distinctAtts << endl;
-          clog << "function was: " << distinctFunc << ". 0 means SUM, 1 means SUM DISTINCT" << endl;
-
-          // use
-          // Function.GrowFromParseTree (finalfunc, *left);
-          // constructs arithmetic inside function to
-
-          if(0 == finalFunction)
-            {
-              clog << "we have no function given, so, there is no SUM or SUM DISTINCT." << endl;;
-              if(0 == distinctAtts)
-                {
-                  clog << "there is no distinct at all." << endl;
-                  /*
-                    SELECT l.l_orderkey
-                    FROM lineitem AS l
-                    WHERE (l.l_quantity > 30)
-
-                    should be
-                    project to output
-                    select to project
-                    file to select
-
-                    select can be selectfile, not select pipe
-                  */
-                  if (sfNodes.size() > 0 and 0 == jNodes.size() and 0 == spNodes.size()) // the third is necessarily true from the second. can't have a join selectpipe if there was no join, can only ever have one select if there is no join.
+                  if(pureSelection)
                     {
-                      clog << "only select, and nothing else, combined with no function and no distinct, makes hopefully an easy case." << endl;
-                      // how do I know to connect anything with anything else.
-                      // here we have no joins, and no interior selects. so only select and project.
-
-                      vector<string> attrs;
-                      GetAttsOut(attsToSelect, attrs);
-
-                      // guys in NameList come out in reverse order, so reverse it.
-                      reverse(attrs.begin(), attrs.end());
-
-                      // find the select statement, that has the attr that is coming out.
-                      SelectFileNode sfn;
-                      vector<int> attrIndexesToKeep;
-                      for (vector<string>::iterator jt = attrs.begin(); jt != attrs.end(); jt++)
-                        {
-                          for (vector<SelectFileNode>::iterator it = sfNodes.begin(); it != sfNodes.end(); it++)
-                            {
-                              if (-1 != (*it).sch.Find((*jt).c_str())) // if it isn't found,
-                                { // then it has been found
-                                  auto location = (*it).sch.Find((*jt).c_str());
-                                  attrIndexesToKeep.push_back(location);
-                                  sfn = (*it);
-                                }
-                            }
-                        }
-                      // at this point, we have the attrs of the schema that exists in the node below, and the node below.
-                      // sfn, is our node that we will point our select at, and have point at our project.
-                      // attrIndexesToKeep, is the 'array' that we will give
-
-                      // NameList *attsToSelect; // final bits out,
-
-                      unsigned freshPID = GetPipeID();
-                      sfn.PipeID = pn.PipeID = freshPID;
-                      int numIn(sfn.sch.GetNumAtts());
-                      int numOut(NameListLen(attsToSelect));
-                      Schema pOutSchema(sfn.sch, attrIndexesToKeep); // need to generate the new schema, that has numout attrs, which are those of the attrindexestokeep
-                      pOutSchema.Print(); // oh my god is this right...?
-                      pn.attsToKeep = attrIndexesToKeep;
-                      pn.numIn = numIn;
-                      pn.numOut = numOut;
-                      pn.sch = pOutSchema;
+                      clog << "This is a pure selection" << endl;
+                      // take output of selection, pipe into project
+                      ProjectNode * pnptr = new ProjectNode();
+                      ProjectNode & pn = *pnptr; // this node can take the entire cnf.
+                      top = pnptr;
                       pn.down = &sfn;
                       sfn.up = &pn;
-                      top = &pn;
+
+                      sfn.OutPipeID = pn.InPipeID = freshPID;
+                      const int numIn(sfn.sch.GetNumAtts());
+                      pn.numIn = numIn;
+                      const unsigned numOut(NameListLen(attsToSelect));
+                      pn.numOut = numOut;
+                      {
+                        vector<string> attrs;
+                        GetAttsOut(attsToSelect, attrs);
+                        // old schema is sfn.sch
+                        // attributes as vector is attrs
+                        vector<int> attsToKeep;
+                        for (auto it = attrs.begin(); it != attrs.end(); it++)
+                          {
+                            attsToKeep.push_back(sfn.sch.Find((*it).c_str()));
+                          }
+                        assert (numOut == attsToKeep.size());
+                        Schema pOutSchema(sfn.sch, attsToKeep); // need to generate the new schema, that has numout attrs, which are those of the attrindexestokeep
+                        pn.attsToKeep = attsToKeep;
+                        pn.sch = pOutSchema;
+                      }
+                    }
+                  else // something more complicated than a pure selection.
+                    {
+                      if (1 == distinctAtts) // distinct non-aggregate
+                        {}
+                      else if (1 == distinctFunc) // distinct Aggregate (there is a sum over the distinct atts)
+                        {}
                     }
                 }
+
+              if(WriteToFile) // add a writeFileNode at the end
+                {
+                  WriteOutNode * wonptr = new WriteOutNode;
+                  WriteOutNode & won = *wonptr;
+                  won.sch = top->sch; // take directly previous schema
+                  unsigned freshPID = GetPipeID();
+                  won.InPipeID = top->OutPipeID = freshPID;
+                  won.fileOutName = FileToWriteTo;
+                  won.down = top;
+                  top = wonptr; // make the new top the won node
+                }
+
+              // everything has been constructed at this point
+
+              // print
+              clog << endl << " Printing the query plan" << endl << endl;
+              PrintScheduleTree(top);
+
+              // execute.
+              if (Execute)
+                {
+                  clog << endl << " Executing the query " << endl << endl;
+                  // we've got our output node top.
+                  ExecuteScheduleTree(top);
+                  // select files need to know files to select.
+                  // need to instantiate relation operators
+                  // need to establish pipes from place to place
+                  // for our select file nodes, need to
+                }
+              clog << "was a query" << endl;
             }
-
-          // everything has been constructed at this point
-
-          // print
-          clog << endl << " Printing the query plan" << endl << endl;
-          // assuming for now that the last thing is always a ProjectNode, which we created at the beginning. (It could be a write to file, implemented in p5)
-          PrintScheduleTree(top);
-
-          // execute.
-          if (Execute)
-            {
-              clog << endl << " Executing the query " << endl << endl;
-              // we've got our output node top.
-
-              // select files need to know files to select.
-              // need to instantiate relation operators
-              // need to establish pipes from place to place
-              // for our select file nodes, need to
-            }
-          clog << "was a query" << endl;
         }
-      else if (0 == query) // == true
+      else if (0 == query) // not a query
         {
           clog << "was a maintenance command" << endl;
           if (1 == outputChange) // SET OUTPUT
@@ -960,7 +946,7 @@ int main ()
               if(1 == Tables.count(tableName))
                 {
                   remove(TableToFileName[tableName].c_str()); // remove bin file
-                  remove((TableToFileName[tableName]+".meta").c_str()); // remove bin file
+                  remove((TableToFileName[tableName]+".meta").c_str()); // remove meta file
                   TableToFileName.erase(tableName); // forget about bin file
                   TableToSchema.erase(tableName); // forget about schema
                   Tables.erase(tableName); // forget about table

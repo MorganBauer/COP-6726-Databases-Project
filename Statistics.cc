@@ -96,13 +96,13 @@ void Statistics::CopyRel(char *oldName, char *newName)
   for (it = oldAttrs.begin(); it != oldAttrs.end(); it++ )
     {
       string newAttrName(newN+"."+(*it).first); // might need to do this for the schma variables as well.
-      clog << "aliasing " << newAttrName << newAttrName.size() << " to " << newN << endl;
+      // clog << "aliasing " << newAttrName << newAttrName.size() << " to " << newN << endl;
       newR.AddAtt(newAttrName, (*it).second); // add modified attr to new relation
       extantAttrs[newAttrName] = newN; // know where these modified attrs are
     }
 
   rels[newN] = newR; // put new relation in
-  newR.print();
+  // newR.print();
 }
 
 void Statistics::Read(char *fromWhere)

@@ -143,7 +143,7 @@ void get_cnf (char *input, Schema *left, CNF &cnf_pred, Record &literal) {
 	close_lexical_parser ();
 }
 
-void get_cnf (char *input, Schema *left, Schema *right, CNF &cnf_pred, Record &literal) {
+void get_cnf (char *input, Schema *left, Schema *right, CNF &cnf_pred, Record &literal) { // join CNF and literal
 	init_lexical_parser (input);
   	if (yyparse() != 0) {
 		cout << " Error: can't parse your CNF " << input << endl;

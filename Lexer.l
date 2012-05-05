@@ -129,6 +129,7 @@ void yyerror(char*s);
   			return(Name);
 			}
 
+                       /*
 \'[A-Za-z0-9_\/\.]+\' {yylval.actualChars = strdup(yytext + 1);
                        if (yylval.actualChars[yyleng-2] != '\'')
                            yyerror("LEX_ERROR: improperly terminated string");
@@ -137,8 +138,9 @@ void yyerror(char*s);
                        // printf("found ### %s ###\n", yylval.actualChars);
                        return(FilePath);
                        }
+                       */
 
-\'[^'\n]*\'            {/* take care of ' in a string */
+\'[^'\n]*\'            {/* take care of escaped single quote in a string */
                         if (yytext[yyleng - 2] == '\\') {
                                 yymore();
                         } else {

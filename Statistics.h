@@ -122,7 +122,6 @@ class Statistics
       clog << "found " << extantAttrs.count(a);
       if (1 == extantAttrs.count(a))
         {
-          clog << "WTF" << endl;
           clog << extantAttrs[a] << endl;
           string tbl(extantAttrs[a]);
           clog << tbl << endl;
