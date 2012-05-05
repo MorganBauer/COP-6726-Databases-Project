@@ -11,7 +11,11 @@
 #include "Statistics.h"
 #include <cassert>
 #include "Schema.h"
+#include "Comparison.h"
 #include "main.h"
+#include "Pipe.h"
+#include "RelOp.h"
+
 using namespace std;
 
 extern "C" {
@@ -60,6 +64,9 @@ char * const customer = "customer";
 char * const orders = "orders";
 char * const region = "region";
 char * const lineitem = "lineitem";
+
+map<unsigned,Pipe *> Pipes;
+const static unsigned pipeSize = 100;
 
 map<std::string, Schema> initSchemas()
 {
@@ -424,15 +431,16 @@ string getSelectAttr(struct AndList *pAnd)
   }
 }
 
-enum QueryNodeType {Generic, SelectFile, SelectPipe, Project, Join, DuplicateRemoval, Sum, GroupBy, WriteOut };
+enum QueryNodeType {GenericN, SelectFileN, SelectPipeN, ProjectN, JoinN, DuplicateRemovalN, SumN, GroupByN, WriteOutN };
 
 struct TreeNode
 {
   QueryNodeType code;
   TreeNode () {}
-  TreeNode (QueryNodeType c) : code(c), down(0), InPipeID(0), OutPipeID(0) {}
+  TreeNode (QueryNodeType c) : code(c), down(0), operation(0), InPipeID(0), OutPipeID(0) {}
   Schema sch;
   TreeNode * down;
+  RelationalOp * operation;
   unsigned InPipeID;
   unsigned OutPipeID;
   virtual ~TreeNode () {}
@@ -443,30 +451,33 @@ struct SelectPipeNode : TreeNode
   TreeNode * up;
   AndList * cnf; // the selection predicate.
   string attr; // the attribute to be selected upon
-  SelectPipeNode() : TreeNode(SelectPipe) {}
+  SelectPipeNode() : TreeNode(SelectPipeN) {}
 };
 
 struct SelectFileNode : TreeNode
 {
   TreeNode * up;
-  SelectFileNode() : TreeNode(SelectFile) {}
+  SelectFileNode() : TreeNode(SelectFileN) {}
   AndList * cnf; // the selection predicate.
-  string attr; // the attribute to be selected upon
+  string DBFileName;
+  DBFile * dbf;
+  CNF * RelOpCNF;
+  Record * literal;
   void Print(void)
   {
     clog << "********" << endl
          << "This is a Selection Node " << this << endl
-         << " on at least the attribute " << attr << endl;
+         << "from the file  " << DBFileName << endl;
     clog << "the selection condition is " << endl;
     PrintParseTree(cnf);
-    clog << " we came from " << up << " and are connected to it through Pipe " << InPipeID << endl;
+    clog << " we came from " << up << " and are connected to it through Pipe " << OutPipeID << endl;
     clog << "********" << endl;
   }
 };
 
 struct ProjectNode : TreeNode
 {
-  ProjectNode() : TreeNode(Project) {}
+  ProjectNode() : TreeNode(ProjectN) {}
   vector<int> attsToKeep;
   int numIn;
   int numOut;
@@ -478,7 +489,8 @@ struct ProjectNode : TreeNode
          << numIn << " attributes are coming in" << endl
          << numOut << " attributes are going out" << endl
          << "it is connected to the node " << down << endl
-         << "by a pipe, with PipeID: " << OutPipeID << endl
+         << "by a pipe, with PipeID: " << InPipeID << endl
+         << "writing pipe, with PipeID: " << OutPipeID << endl
          << " the out schema is ";
     sch.Print();
     clog << "********" << endl;
@@ -487,14 +499,14 @@ struct ProjectNode : TreeNode
 
 struct JoinNode : TreeNode
 {
-  JoinNode() : TreeNode(Join) {}
+  JoinNode() : TreeNode(JoinN) {}
   TreeNode * left;
   TreeNode * right;
 };
 
 struct WriteOutNode : TreeNode
 {
-  WriteOutNode() : TreeNode(WriteOut) {}
+  WriteOutNode() : TreeNode(WriteOutN) {}
   string fileOutName;
   void Print()
   {
@@ -528,7 +540,7 @@ void PrintScheduleTree(TreeNode * tn)
     {
       switch(tn->code)
         {
-        case Project :
+        case ProjectN:
           {
             // print the project node.
             ProjectNode * pn = ((ProjectNode *)tn);
@@ -536,14 +548,14 @@ void PrintScheduleTree(TreeNode * tn)
             PrintScheduleTree(pn->down);
           }
           break;
-        case SelectFile:
+        case SelectFileN:
           {
             SelectFileNode * sfn = ((SelectFileNode *)tn);
             sfn->Print();
             return; // this is a dead end, there can be nothing below it.
           }
           break;
-        case WriteOut:
+        case WriteOutN:
             {
               WriteOutNode * won = ((WriteOutNode *)tn);
               won->Print();
@@ -565,23 +577,57 @@ void ExecuteScheduleTree(TreeNode * tn)
     {
       switch(tn->code)
         {
-        case Project :
+        case ProjectN:
           {
             // print the project node.
             ProjectNode * pn = ((ProjectNode *)tn);
-            PrintScheduleTree(pn->down);
+            Project * Pptr = new Project;
+            pn->operation = Pptr;
+            Project & P = *Pptr;
+            Pipes[pn->InPipeID] = new Pipe(pipeSize);
+            P.Run(*Pipes[pn->InPipeID],
+                  *Pipes[pn->OutPipeID],
+                  &(pn->attsToKeep[0]), pn->numIn, pn->numOut);
+            ExecuteScheduleTree(pn->down);
           }
           break;
-        case SelectFile:
+        case SelectFileN:
           {
             SelectFileNode * sfn = ((SelectFileNode *)tn);
+            // RELATIONAL OPERATION
+            SelectFile * SFptr = new SelectFile;
+            sfn->operation = SFptr;
+            SelectFile & SF = *SFptr;
+            // DBFILE
+            sfn->dbf = new DBFile;
+            char * fname = strdup(sfn->DBFileName.c_str());
+            sfn->dbf->Open(fname);
+            free(fname);
+            // RECORD
+            Record * Rptr = new Record();
+            sfn->literal = Rptr;
+            Record & R = * Rptr;
+            // CNF
+            CNF * CNFptr = new CNF;
+            sfn->RelOpCNF = CNFptr;
+            CNF & cnf = *CNFptr;
+            cnf.GrowFromParseTree(sfn->cnf,&sfn->sch,R);
+            SF.Run(*(sfn->dbf),
+                   *Pipes[sfn->OutPipeID],
+                   cnf,R);
             return; // this is a dead end, there can be nothing below it.
           }
           break;
-        case WriteOut:
+        case WriteOutN:
             {
               WriteOutNode * won = ((WriteOutNode *)tn);
-              PrintScheduleTree(won->down);
+              FILE *writefile = fopen(won->fileOutName.c_str(),"w");
+              Pipes[won->InPipeID] = new Pipe(pipeSize);
+              WriteOut * Wptr = new WriteOut;
+              won->operation = Wptr;
+              WriteOut & W = *Wptr;
+              W.Run(*Pipes[won->InPipeID],writefile,won->sch);
+              ExecuteScheduleTree(won->down);
             }
           break;
         default:
@@ -589,6 +635,7 @@ void ExecuteScheduleTree(TreeNode * tn)
             clog << "did not implement printing of node with code " << tn->code << endl;
           }
         }
+      return;
     }
 }
 
@@ -674,9 +721,6 @@ void cleanup(void)
 int main ()
 {
   // load all the tables from a previous run
-
-
-
   {
     // const string message("Welcome to MnemosyneDB");
     // const string spaces(message.size(),' ');
@@ -763,6 +807,7 @@ int main ()
                   string onlyTable (tables->tableName);
                   string onlyTableAlias (tables->aliasAs);
                   // schema for select file, need alias of table
+                  sfn.DBFileName = TableToFileName[onlyTable];
                   sfn.sch = schemas[onlyTableAlias];
                   sfn.sch.Print();
                   unsigned freshPID = GetPipeID();
@@ -837,6 +882,7 @@ int main ()
                   // need to instantiate relation operators
                   // need to establish pipes from place to place
                   // for our select file nodes, need to
+                  top->operation->WaitUntilDone();
                 }
               clog << "was a query" << endl;
             }

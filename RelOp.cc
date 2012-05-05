@@ -256,6 +256,7 @@ void * Project :: thread_starter(void *context)
 }
 
 void * Project :: WorkerThread(void) {
+  clog << "project thread started" << endl;
   Pipe &inPipe = *in;
   Pipe &outPipe = *out;
   Record temp;
@@ -474,11 +475,14 @@ void * WriteOut :: WorkerThread(void) {
   Pipe& inPipe = *in;
 
   Record temp;
+  unsigned counter = 0;
   while(SUCCESS == inPipe.Remove(&temp))
     {
+      counter++;
       ostringstream os;
       temp.Print(sch,os);
       fputs(os.str().c_str(),out);
     }
+  clog << "wrote " << counter << " records to file" << endl;
   pthread_exit(NULL); // make our worker thread go away
 }
