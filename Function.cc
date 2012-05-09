@@ -42,8 +42,9 @@ Type Function :: RecursivelyBuild (struct FuncOperator *parseTree, Schema &mySch
 			// first, make sure that the attribute is there
 			int myNum = mySchema.Find (parseTree->leftOperand->value);
 			if (myNum == -1) {
-				cerr << "Error!  Attribute in arithmatic expression was not found.\n";
-				exit (1);
+                                cerr << "Error!  Attribute in arithmatic expression was not found." << endl;
+                                cerr << "value not found was " << parseTree->leftOperand->value << endl;
+                                exit (1);
 			}
 
 			// it is there, so get the type

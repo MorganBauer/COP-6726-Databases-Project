@@ -54,6 +54,8 @@ extern string tableName;
 extern string fileName;
 extern bool keepGoing;
 extern bool pureSelection;
+extern bool sumQuery;
+extern bool sumDistinctQuery;
 extern vector<Attribute> attributes;
 
 char * const supplier = "supplier";
@@ -273,6 +275,19 @@ vector<string> GetTableNames (TableList * tblst)
   return names;
 }
 
+vector<string> GetTableAliases (TableList * tblst)
+{
+  vector<string> names;
+  while (0 != tblst)
+    {
+      string name(tblst->aliasAs);
+      names.push_back(name);
+      tblst = tblst->next;
+    }
+  reverse(names.begin(), names.end());
+  return names;
+}
+
 unsigned NumTables (TableList * tblst)
 {
   unsigned tableCount = 0;
@@ -431,14 +446,83 @@ string getSelectAttr(struct AndList *pAnd)
   }
 }
 
+string getTableFromCNF(AndList * clause, Statistics s) // return all the tables that a particular clause needs (anything inside an andlist)
+{
+  string Table;
+
+  auto ORl = clause->left;
+  while (0 != ORl)
+    {
+      auto comp = ORl->left;
+      auto lop = comp->left;
+      auto rop = comp->right;
+      if(NAME == lop->code)
+        {
+          Table = s.getAttrHomeTable(lop->value);// lop->value; // is the name of the attr, need to look up what table it is in.
+        }
+      if(NAME == rop->code)
+        {
+          Table = s.getAttrHomeTable(rop->value);// lop->value; // is the name of the attr, need to look up what table it is in.
+        }
+      ORl = ORl->rightOr;
+    }
+  return Table;
+}
+
+
+vector<string> getTablesFromJoinCNF(AndList * clause, Statistics s) // return all the tables that a particular clause needs (anything inside an andlist)
+{
+  vector<string> Tables;
+  auto ORl = clause->left;
+  while (0 != ORl)
+    {
+      auto comp = ORl->left;
+      auto lop = comp->left;
+      auto rop = comp->right;
+      if(NAME == lop->code)
+        {
+          Tables.push_back(s.getAttrHomeTable(lop->value));// lop->value; // is the name of the attr, need to look up what table it is in.
+        }
+      if(NAME == rop->code)
+        {
+          Tables.push_back(s.getAttrHomeTable(rop->value));// lop->value; // is the name of the attr, need to look up what table it is in.
+        }
+      ORl = ORl->rightOr;
+    }
+  return Tables;
+}
+
+map<string,string> TableToAliasMap(TableList * tblst)
+{
+  map<string, string> mapping;
+  while (0 != tblst)
+    {
+      mapping[tblst->tableName] = tblst->aliasAs;
+      tblst = tblst->next;
+    }
+  return mapping;
+}
+
+map<string,string> AliasToTableMap(TableList * tblst)
+{
+  map<string, string> mapping;
+  while (0 != tblst)
+    {
+      mapping[tblst->aliasAs] = tblst->tableName;
+      tblst = tblst->next;
+    }
+  return mapping;
+}
+
 enum QueryNodeType {GenericN, SelectFileN, SelectPipeN, ProjectN, JoinN, DuplicateRemovalN, SumN, GroupByN, WriteOutN };
 
 struct TreeNode
 {
   QueryNodeType code;
   TreeNode () {}
-  TreeNode (QueryNodeType c) : code(c), down(0), operation(0), InPipeID(0), OutPipeID(0) {}
+  TreeNode (QueryNodeType c) : code(c), up(0), down(0), operation(0), InPipeID(0), OutPipeID(0) {}
   Schema sch;
+  TreeNode * up;
   TreeNode * down;
   RelationalOp * operation;
   unsigned InPipeID;
@@ -456,7 +540,6 @@ struct SelectPipeNode : TreeNode
 
 struct SelectFileNode : TreeNode
 {
-  TreeNode * up;
   SelectFileNode() : TreeNode(SelectFileN) {}
   AndList * cnf; // the selection predicate.
   string DBFileName;
@@ -500,8 +583,50 @@ struct ProjectNode : TreeNode
 struct JoinNode : TreeNode
 {
   JoinNode() : TreeNode(JoinN) {}
+  unsigned RPipeID;
+  AndList * cnf; // the join predicate.
   TreeNode * left;
   TreeNode * right;
+  Schema leftSchema;
+  Schema rightSchema;
+  // rel op stuff
+  Pipe * inL;
+  Pipe * inR;
+  Pipe * out;
+  CNF * RelOpCNF;
+  void Print()
+  {
+    clog << "********" << endl
+         << "This is a Join Node " << this << endl
+         << "it is connected to the node " << left << endl
+         << "by a pipe, with PipeID: " << InPipeID << endl
+         << "it is connected to the node " << right << endl
+         << "by a pipe, with PipeID: " << RPipeID << endl
+         << "writing pipe, with PipeID: " << OutPipeID << endl
+         << " the out schema is ";
+    sch.Print();
+    clog << "********" << endl;
+  }
+};
+
+struct SumNode : TreeNode
+{
+  SumNode() : TreeNode(SumN) {}
+  Pipe * in;
+  Pipe * out;
+  Function * fn;
+  void Print()
+  {
+    clog << "********" << endl
+         << "This is a Sum Node " << this << endl
+         << "it is connected to the node " << down << endl
+         << "by a pipe, with PipeID: " << InPipeID << endl
+         << "writing pipe, with PipeID: " << OutPipeID << endl
+         << "function " << fn << endl
+         << " the out schema is ";
+    sch.Print();
+    clog << "********" << endl;
+  }
 };
 
 struct WriteOutNode : TreeNode
@@ -540,6 +665,13 @@ void PrintScheduleTree(TreeNode * tn)
     {
       switch(tn->code)
         {
+        case SelectFileN:
+          {
+            SelectFileNode * sfn = ((SelectFileNode *)tn);
+            sfn->Print();
+            return; // this is a dead end, there can be nothing below it.
+          }
+          break;
         case ProjectN:
           {
             // print the project node.
@@ -548,19 +680,28 @@ void PrintScheduleTree(TreeNode * tn)
             PrintScheduleTree(pn->down);
           }
           break;
-        case SelectFileN:
+        case JoinN:
           {
-            SelectFileNode * sfn = ((SelectFileNode *)tn);
-            sfn->Print();
-            return; // this is a dead end, there can be nothing below it.
+            JoinNode * jn = ((JoinNode *)tn);
+            jn->Print();
+            PrintScheduleTree(jn->left);
+            PrintScheduleTree(jn->right);
+            return;
+          }
+          break;
+        case SumN:
+          {
+            SumNode * sn = ((SumNode *)tn);
+            sn->Print();
+            PrintScheduleTree(sn->down);
           }
           break;
         case WriteOutN:
-            {
-              WriteOutNode * won = ((WriteOutNode *)tn);
-              won->Print();
-              PrintScheduleTree(won->down);
-            }
+          {
+            WriteOutNode * won = ((WriteOutNode *)tn);
+            won->Print();
+            PrintScheduleTree(won->down);
+          }
           break;
         default:
           {
@@ -618,17 +759,56 @@ void ExecuteScheduleTree(TreeNode * tn)
             return; // this is a dead end, there can be nothing below it.
           }
           break;
+        case JoinN:
+          {
+            JoinNode * jn = ((JoinNode *)tn);
+            Join * Jptr = new Join;
+            jn->operation = Jptr;
+            Join & J = *Jptr;
+            Pipes[jn->InPipeID] = new Pipe(pipeSize);
+            Pipes[jn->RPipeID] = new Pipe(pipeSize);
+            Record R;
+            CNF * CNFptr = new CNF;
+            jn->RelOpCNF = CNFptr;
+            CNF & cnf = *CNFptr;
+            cnf.GrowFromParseTree(jn->cnf,&jn->leftSchema,&jn->rightSchema,R);
+
+            J.Run(*Pipes[jn->InPipeID],
+                  *Pipes[jn->RPipeID],
+                  *Pipes[jn->OutPipeID],
+                  cnf,R);
+
+            ExecuteScheduleTree(jn->left);
+            ExecuteScheduleTree(jn->right);
+          }
+          break;
+        case SumN:
+          {
+            SumNode * sn = ((SumNode *)tn);
+            Sum * Sptr = new Sum;
+            sn->operation = Sptr;
+            Sum & S = *Sptr;
+
+            Pipes[sn->InPipeID] = new Pipe(pipeSize);
+
+            S.Run(*Pipes[sn->InPipeID], // made our own inpipe
+                  *Pipes[sn->OutPipeID], // otherside responsible for outpipe
+                  *(sn->fn));
+
+            ExecuteScheduleTree(sn->down);
+          }
+          break;
         case WriteOutN:
-            {
-              WriteOutNode * won = ((WriteOutNode *)tn);
-              FILE *writefile = fopen(won->fileOutName.c_str(),"w");
-              Pipes[won->InPipeID] = new Pipe(pipeSize);
-              WriteOut * Wptr = new WriteOut;
-              won->operation = Wptr;
-              WriteOut & W = *Wptr;
-              W.Run(*Pipes[won->InPipeID],writefile,won->sch);
-              ExecuteScheduleTree(won->down);
-            }
+          {
+            WriteOutNode * won = ((WriteOutNode *)tn);
+            FILE *writefile = fopen(won->fileOutName.c_str(),"w");
+            Pipes[won->InPipeID] = new Pipe(pipeSize);
+            WriteOut * Wptr = new WriteOut;
+            won->operation = Wptr;
+            WriteOut & W = *Wptr;
+            W.Run(*Pipes[won->InPipeID],writefile,won->sch);
+            ExecuteScheduleTree(won->down);
+          }
           break;
         default:
           {
@@ -715,11 +895,15 @@ void cleanup(void)
   planOnly = 0; // 1 if we are changing settings to planning only. Do not execute.
   setStdOut = 0;
   pureSelection = false;
+  sumQuery = false;
+  sumDistinctQuery = false;
+
   pipeID = 0;
 }
 
 int main ()
 {
+  CNF cnftest;
   // load all the tables from a previous run
   {
     // const string message("Welcome to MnemosyneDB");
@@ -788,6 +972,10 @@ int main ()
             {
               clog << "have all the tables needed, good to go!" << endl;
 
+              map<string,string> TableToAlias = TableToAliasMap(tables);
+              map<string,string> AliasToTable = AliasToTableMap(tables);
+
+
               Statistics s;
               s = initStatistics();
               map<std::string, Schema> schemas = TableToSchema;// initSchemas(); // need to put schemas from TableToSchma in here
@@ -853,6 +1041,175 @@ int main ()
                         {}
                     }
                 }
+              else // MORETABLES
+                {
+                  clog << "more than one table, join required" << endl;
+
+                  // makes a copy of each clause
+                  Clauses selects;
+                  Clauses joins;
+                  Clauses virtualSelects;
+                  {
+                    SeparateJoinsAndSelects(boolean,joins, selects);
+                    FindVirtualSelects(selects, s, virtualSelects);
+                    clog << "num joins is " << joins.size() << endl
+                         << "num selects is " << selects.size() << endl
+                         << "num virtual selects needing joined tables is " << virtualSelects.size() << endl;
+                  }
+
+                  // for each of the selects, I need to generate a select file.
+                  // I need to know what file the select file is hooked up to
+                  // also, for each of the tables, that do not have a select file, I need to also create a
+                  // so goal is to associate each of the AndList clauses that I have, with a tableName;
+                  auto TableAliases = GetTableAliases(tables);
+
+                  map<string, AndList *> selectGroups;
+
+                  for (auto it = selects.begin(); it != selects.end(); it++)
+                    {
+                      auto tabs = getTableFromCNF(&(*it), s);
+                      clog << "selection on table " << tabs << endl;
+                      // now, have table name in tabs, look up table in selectGroups
+                      if(1 == selectGroups.count(tabs))
+                        {
+                          auto andptr = selectGroups[tabs];
+                          AndList * andlstptr = new AndList;
+                          andlstptr->left = (*it).left;
+                          andlstptr->rightAnd = 0;
+                          andptr->rightAnd = andlstptr;
+                        }
+                      else // first time we saw anything from this table
+                        {
+                          AndList * andlstptr = new AndList;
+                          andlstptr->left = (*it).left;
+                          andlstptr->rightAnd = 0;
+                          selectGroups[tabs] = andlstptr; // need to malloc a copy for ourselves
+                        }
+                    }
+                  // now, anything that has an andlist cnf will be in selectGroups.
+                  for (auto it = TableAliases.begin(); it != TableAliases.end(); it++)
+                    {
+                      if (0 == selectGroups.count(*it))
+                        { // found a table that is not in select groups, give it a null ptr for it's and list
+                          selectGroups[*it] = 0;
+                        }
+                    }
+
+                  // map from string table aliases, to TreeNodes
+                  map<string,TreeNode *> AliasToNode;
+                  // now selectGroups contains grouped cnfs, for all relations.
+                  // create an array of selectNodes
+                  vector<SelectFileNode *> sfnodes; // pointers, because the cleanup will deallocate the actual nodes for us
+                  // s.print();
+                  for (auto it = selectGroups.begin(); it != selectGroups.end(); it++) // iterating over keys, which are aliased table names
+                    {
+                      SelectFileNode * sfnptr = new SelectFileNode();
+                      SelectFileNode & sfn = *sfnptr; // this node can take the entire cnf.
+                      string tableAlias = (*it).first;
+                      clog << "alias of table containing attrs for selection " << tableAlias << endl;
+                      AliasToNode[tableAlias] = sfnptr;
+                      string TableName = AliasToTable[tableAlias];
+                      clog << "true name of table containing attrs for selection " << TableName << endl;
+                      sfn.cnf = (*it).second;
+                      clog << "cnf printed " << endl;
+                      PrintParseTree((*it).second);
+                      sfn.sch = schemas[tableAlias];
+                      clog << "selection schema" << endl;
+                      sfn.sch.Print();
+                      sfn.DBFileName = TableToFileName[TableName];
+                      unsigned freshPID = GetPipeID();
+                      sfn.OutPipeID = freshPID;
+                    }
+
+                  // all select file nodes should be initialized and ready to print and execute.
+                  // now to pair them up with joins...
+
+                  // for each join, find the two selects that it needs to fulfill it. really, find the two (NODES) that are the tables.
+                  for (auto it = joins.begin(); it != joins.end(); it++)
+                    {
+                      clog << " making a join " << endl;
+                      // get what this join needs
+                      auto tabsNeeded = getTablesFromJoinCNF(&(*it), s);
+                      string leftAlias(tabsNeeded[0]);
+                      clog << "table 1 is " << leftAlias << endl;
+                      string rightAlias(tabsNeeded[1]);
+                      clog << "table 2 is " << rightAlias << endl;
+                      assert(2 == tabsNeeded.size());
+                      // look up the TreeNodes that satisfy that
+                      TreeNode * left = AliasToNode[leftAlias];
+                      TreeNode * right = AliasToNode[rightAlias];
+                      // create the actual join node
+                      JoinNode * jnptr = new JoinNode;
+                      JoinNode & jn = *jnptr;
+                      // populate the join node with everything
+                      left->up = jnptr;
+                      right->up = jnptr;
+                      jn.left = left;
+                      jn.right = right;
+                      jn.leftSchema = left->sch;
+                      jn.leftSchema.Print();
+                      jn.rightSchema = right->sch;
+                      jn.rightSchema.Print();
+                      jn.InPipeID = left->OutPipeID;
+                      jn.RPipeID = right->OutPipeID;
+                      unsigned freshPID = GetPipeID();
+                      jn.OutPipeID = freshPID;
+                      //
+                      AndList * andlstptr = new AndList;
+                      andlstptr->left = (*it).left;
+                      andlstptr->rightAnd = 0;
+                      jn.cnf = andlstptr;
+                      // create the merged schema
+                      Schema merged(left->sch, right->sch);
+                      // right atts pointer, and left atts pointer
+                      jn.sch = merged;
+                      clog << "join schema" << endl;
+                      jn.sch.Print();
+                      AliasToNode[leftAlias] = jnptr; // put join node into aliastonode table, and remove old nodes from table.
+                      AliasToNode[rightAlias] = jnptr; // put join node into aliastonode table, and remove old nodes from table.
+                      top = jnptr; // a join will be on top of everything, and a bottleneck.
+                    }
+
+                  clog << "is c.c_acctbal in schema of join"
+                       << top->sch.Find("c.c_acctbal") << endl;
+                  // finally do virtual selectst
+
+                  // cap it off with a project or sum or whatever
+                  if (pureSelection)
+                    {}
+                  else if (sumQuery)
+                    {
+                      SumNode * snptr = new SumNode;
+                      SumNode & sn = *snptr;
+
+                      sn.InPipeID = top->OutPipeID;
+                      Function * fptr = new Function;
+                      Function & F = *fptr; // finalFunction is our summing function
+                      F.GrowFromParseTree(finalFunction, top->sch);
+                      sn.fn = fptr;
+                      bool functionReturnsInt = F.isInt(); // true if F returns an int type
+                      Attribute schattr;
+                      schattr.name = "SUM";
+                      if (functionReturnsInt)
+                        {
+                          schattr.myType = Int;
+                        }
+                      else // floating point result
+                        {
+                          schattr.myType = Double;
+                        }
+                      Schema retSchema ("out_schema",1,&schattr);
+                      sn.sch = retSchema;
+                      sn.down = top;
+
+                      // top is now sum
+                      top = snptr;
+                    }
+                  else if(sumDistinctQuery)
+                    {}
+
+                } // END MORE TABLES
+
 
               if(WriteToFile) // add a writeFileNode at the end
                 {

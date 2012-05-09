@@ -29,11 +29,11 @@ Type Schema :: FindType (char *attName) {
 	return Int;
 }
 
-int Schema :: GetNumAtts () {
+int Schema :: GetNumAtts () const {
 	return numAtts;
 }
 
-Attribute *Schema :: GetAtts () {
+Attribute * Schema :: GetAtts () {
 	return myAtts;
 }
 
@@ -152,6 +152,30 @@ Schema :: Schema (char *fName, const char * relName) : numAtts(0), myAtts(0), fi
 	}
 
 	fclose (foo);
+}
+
+// merge
+Schema::Schema(const Schema& left, const Schema& right) : fileName(0)
+{
+  clog << " mergeing schemas for join" << endl;
+  int const leftNumAtts = left.GetNumAtts();
+  int const rightNumAtts = right.GetNumAtts();
+  numAtts = leftNumAtts + rightNumAtts;
+  clog << "left num " << leftNumAtts << endl
+       << "right num " << rightNumAtts  << endl
+       << "total num " << numAtts << endl;
+  myAtts = new Attribute[numAtts];
+  int i = 0;
+  for (; i < leftNumAtts; i++ )
+    {
+      myAtts[i] = left.myAtts[i];
+      myAtts[i].name = strdup(myAtts[i].name);
+    }
+  for(;i<numAtts;i++)
+    {
+      myAtts[i] = right.myAtts[i-leftNumAtts];
+      myAtts[i].name = strdup(myAtts[i].name);
+    }
 }
 
 Schema::Schema(const Schema& s, vector<int> indexesToKeep) : fileName(0)

@@ -42,7 +42,7 @@ public:
 	Attribute *GetAtts ();
 
 	// returns the number of attributes
-	int GetNumAtts ();
+	int GetNumAtts () const;
 
 	// this finds the position of the specified attribute in the schema
 	// returns a -1 if the attribute is not present in the schema
@@ -57,7 +57,9 @@ public:
 	// this composes a schema instance in-memory
 	Schema (const char *fName, int num_atts, Attribute *atts);
 
-
+        // merges two schemas
+        Schema(const Schema& left, const Schema& right);
+        //
         Schema(const Schema& s, std::vector<int> indexesToKeep);
 
 	// this constructs a sort order structure that can be used to

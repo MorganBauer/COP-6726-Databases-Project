@@ -46,6 +46,10 @@ public:
             }
           delete[] opList;
         };
+        bool isInt()
+        {
+          return (1 == returnsInt);
+        };
 	// this grows the specified function from a parse tree and converts
 	// it into an accumulator-based computation over the attributes in
 	// a record with the given schema; the record "literal" is produced

@@ -116,10 +116,14 @@ class Statistics
       using std::clog;
       using std::endl;
       using std::string;
-      clog << "called get attr home table" << endl;
+      // clog << "called get attr home table" << endl;
       // std::string a(attr);
-      clog << a << a.size() << endl;
-      clog << "found " << extantAttrs.count(a);
+      // clog << a << a.size() << endl;
+      clog << "looking for " << a;
+        if(0 == extantAttrs.count(a))
+          clog << " not found" << endl;
+        else
+          clog << " found" << endl;
       if (1 == extantAttrs.count(a))
         {
           clog << extantAttrs[a] << endl;

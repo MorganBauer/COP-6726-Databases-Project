@@ -77,9 +77,9 @@ class CNF {
 	Comparison orList[MAX_ANDS][MAX_ORS];
 
 	int orLens[MAX_ANDS];
-	int numAnds;
 
 public:
+	int numAnds;
 
         int GetSearchOrder(OrderMaker &);
 	// this returns an instance of the OrderMaker class that

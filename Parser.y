@@ -21,6 +21,8 @@
   struct AndList *boolean = 0; // the predicate in the WHERE clause
   struct NameList *groupingAtts = 0; // grouping atts (NULL if no grouping)
   struct NameList *attsToSelect = 0; // the set of attributes in the SELECT (NULL if no such atts)
+  bool sumQuery = false;
+  bool sumDistinctQuery = false;
   int distinctAtts = 0; // 1 if there is a DISTINCT in a non-aggregate query
   int distinctFunc = 0; // 1 if there is a DISTINCT in an aggregate query
   int query = 0;
@@ -234,16 +236,17 @@ WhatIWant: Function ',' Atts
   distinctAtts = 1;
   finalFunction = NULL;
   attsToSelect = $2;
-  finalFunction = NULL;
 };
 
 Function: SUM '(' CompoundExp ')'
 {
+  sumQuery = true;
   finalFunction = $3;
 }
 
 | SUM DISTINCT '(' CompoundExp ')'
 {
+  sumDistinctQuery = true;
   distinctFunc = 1;
   finalFunction = $4;
 };
@@ -460,6 +463,7 @@ Float
   // construct and send up the operand containing the FP number
   $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
   $$->code = DOUBLE;
+  printf("double");
   $$->value = $1;
 }
 
@@ -468,6 +472,7 @@ Float
   // construct and send up the operand containing the integer
   $$ = (struct FuncOperand *) malloc (sizeof (struct FuncOperand));
   $$->code = INT;
+  printf("integer");
   $$->value = $1;
 }
 
